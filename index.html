@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pre-market scanner</title>
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #F5F7FA;
+    --panel: #FFFFFF;
+    --ink: #1B2432;
+    --muted: #5A6577;
+    --line: #D8DEE6;
+    --up: #0D7A49;
+    --up-soft: #D7F0E3;
+    --flag: #A9501A;
+    --flag-soft: #F8E6D8;
+    --accent: #2453C2;
+    --accent-ink: #FFFFFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper: #121821;
+      --panel: #19212D;
+      --ink: #E6EBF2;
+      --muted: #97A3B5;
+      --line: #2C3747;
+      --up: #4CC98B;
+      --up-soft: #173A2B;
+      --flag: #F0A06A;
+      --flag-soft: #3D2817;
+      --accent: #6E95F2;
+      --accent-ink: #0F1724;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-variant-numeric: tabular-nums;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-size: 26px; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 70ch; }
+
+  details.keys {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 16px;
+  }
+  details.keys summary { cursor: pointer; font-weight: 600; }
+  .keygrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; margin-top: 4px; padding: 9px 10px; font: inherit; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+  }
+  .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; margin: 8px 0 18px; }
+  button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 11px 22px; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink);
+  }
+  button.quiet { background: transparent; color: var(--accent); border: 1px solid var(--line); padding: 10px 16px; }
+  button:disabled { opacity: .5; cursor: default; }
+  button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .auto { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+
+  #status { color: var(--muted); font-size: 14px; min-height: 1.5em; margin-bottom: 12px; }
+  #status.err { color: var(--flag); }
+
+  .tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; }
+  th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; font-weight: 600; color: var(--muted); background: var(--panel); position: sticky; top: 0; }
+  td.l, th.l { text-align: left; }
+  tr:last-child td { border-bottom: 0; }
+  .rank { color: var(--muted); width: 2.5em; }
+  .tk a { font-weight: 700; color: var(--ink); text-decoration: none; font-size: 16px; }
+  .tk a:hover { text-decoration: underline; }
+  .gap { position: relative; min-width: 120px; }
+  .gap span { position: relative; z-index: 1; font-weight: 600; color: var(--up); }
+  .gap i { position: absolute; right: 12px; top: 8px; bottom: 8px; background: var(--up-soft); border-radius: 3px; }
+  .news { max-width: 360px; font-size: 13px; color: var(--muted); }
+  .news a { color: inherit; }
+  .flag { display: inline-block; margin-bottom: 3px; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-weight: 600; background: var(--flag-soft); color: var(--flag); }
+  .score { font-weight: 700; }
+  .empty { padding: 36px 20px; text-align: center; color: var(--muted); }
+  .foot { font-size: 13px; color: var(--muted); margin-top: 16px; max-width: 80ch; }
+  .review { margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--line); }
+  .review h2 { font-size: 20px; margin: 0 0 4px; }
+  .rvbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: end; margin-bottom: 14px; }
+  #rvStatus { color: var(--muted); font-size: 14px; min-height: 1.5em; margin-bottom: 12px; max-width: 80ch; }
+  #rvStatus.err { color: var(--flag); }
+  #rvStatus strong { color: var(--ink); }
+  .pos { color: var(--up); font-weight: 600; }
+  .neg { color: var(--flag); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pre-market scanner</h1>
+  <p class="sub">Finds US stocks under $5 with the strongest pre-market gap, unusual pre-market volume, and fresh news, then ranks them. Best run between 8:00 and 9:15 AM Eastern.</p>
+
+  <details class="keys" id="keysBox">
+    <summary>Alpaca API keys</summary>
+    <div class="keygrid">
+      <label>API key ID<input type="text" id="keyId" autocomplete="off" spellcheck="false"></label>
+      <label>Secret key<input type="password" id="secret" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <p class="hint">Use your free paper-trading keys. They’re saved only in this browser on this computer.</p>
+  </details>
+
+  <div class="bar">
+    <button id="runBtn">Run scan</button>
+    <button class="quiet" id="csvBtn" disabled>Download CSV</button>
+    <label class="auto"><input type="checkbox" id="autoRun"> Run automatically at 8:40 AM ET on weekdays while this tab is open</label>
+  </div>
+
+  <div id="status">Enter your keys, then run the scan.</div>
+  <div class="tablewrap"><div class="empty" id="empty">No results yet.</div><table id="tbl" hidden>
+    <thead><tr>
+      <th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Prev close</th><th>Gap</th>
+      <th>Pre-mkt volume</th><th>% of avg day</th><th class="l">Latest news</th><th>Score</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+
+  <p class="foot">Pre-market volume and price come from consolidated market data delayed 15 minutes (the free plan’s limit), refreshed with the latest IEX trade where one exists. A high score means unusual pre-market interest, not a prediction. Stocks that gap up often fade after the open, especially when a stock offering is announced. Treat this as a shortlist to research.</p>
+
+  <section class="review">
+    <h2>How past picks did</h2>
+    <p class="sub">Measured from the opening price, the way you’d actually buy after 9:30. Each scan’s picks are saved in this browser automatically.</p>
+    <div class="rvbar">
+      <label>Day<select id="rvDate"></select></label>
+      <label>Picks to check<input type="number" id="rvN" value="5" min="1" max="20" step="1"></label>
+      <label>Sell target %<input type="number" id="rvT" value="15" min="1" max="200" step="1"></label>
+      <label>Stop-loss %<input type="number" id="rvS" value="7" min="1" max="90" step="1"></label>
+      <button class="quiet" id="rvBtn">Check results</button>
+    </div>
+    <div id="rvStatus"></div>
+    <div class="tablewrap" id="rvWrap" hidden><table>
+      <thead><tr>
+        <th class="l">Ticker</th><th>Open</th><th>High after open</th><th>Close vs open</th><th class="l">With target and stop</th>
+      </tr></thead>
+      <tbody id="rvRows"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<script>
+const DATA = "https://data.alpaca.markets";
+const TRADE = "https://paper-api.alpaca.markets";
+const MAX_PRICE = 5, MIN_PRICE = 0.5, MIN_AVG_VOL = 500000, MIN_PM_VOL = 50000;
+const DEEP_DIVE = 40, SHOW_TOP = 20;
+
+const CATALYSTS = { "fda":3, "approval":3, "approved":3, "phase 3":3, "phase 2":2, "breakthrough":2,
+  "to be acquired":4, "merger":3, "acquisition":3, "buyout":3, "contract":2, "award":2,
+  "partnership":2, "agreement":1, "collaboration":1, "beats":2, "record revenue":2,
+  "raises guidance":2, "earnings":1, "patent":1 };
+const RED_FLAGS = { "offering":-4, "registered direct":-4, "dilution":-3, "warrants":-2,
+  "reverse split":-3, "delist":-3, "deficiency":-2, "bankruptcy":-5, "chapter 11":-5,
+  "going concern":-4, "misses":-2 };
+
+const $ = id => document.getElementById(id);
+let lastResults = [];
+
+// ---------- storage (local conveniences only) ----------
+function load(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }
+function save(k, v) { try { localStorage.setItem(k, v); } catch {} }
+$("keyId").value = load("apca_key");
+$("secret").value = load("apca_secret");
+$("autoRun").checked = load("auto_run") === "1";
+if (!$("keyId").value) $("keysBox").open = true;
+$("keyId").addEventListener("change", e => save("apca_key", e.target.value.trim()));
+$("secret").addEventListener("change", e => save("apca_secret", e.target.value.trim()));
+$("autoRun").addEventListener("change", e => save("auto_run", e.target.checked ? "1" : "0"));
+
+// ---------- time helpers (Eastern) ----------
+function et(d = new Date()) {
+  const f = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit",
+    day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false, weekday: "short" });
+  const p = Object.fromEntries(f.formatToParts(d).map(x => [x.type, x.value]));
+  const y = +p.year, m = +p.month, day = +p.day, h = (+p.hour) % 24, min = +p.minute;
+  const offsetMin = Math.round((Date.UTC(y, m - 1, day, h, min) - d.getTime()) / 60000 / 15) * 15;
+  return { y, m, day, h, min, wd: p.weekday, date: `${p.year}-${p.month}-${p.day}`, offsetMin };
+}
+// A wall-clock Eastern time on a given date ("YYYY-MM-DD") as a Date
+function etOn(dateStr, h, min) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const off = et(new Date(Date.UTC(y, m - 1, d, 12))).offsetMin;
+  return new Date(Date.UTC(y, m - 1, d, h, min) - off * 60000);
+}
+function etToday(h, min) { return etOn(et().date, h, min); }
+
+// ---------- API ----------
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function api(url, tries = 0) {
+  const r = await fetch(url, { headers: {
+    "APCA-API-KEY-ID": $("keyId").value.trim(),
+    "APCA-API-SECRET-KEY": $("secret").value.trim() } });
+  if (r.status === 429 && tries < 5) { await sleep(3000); return api(url, tries + 1); }
+  if (!r.ok) {
+    const body = (await r.text()).slice(0, 200);
+    if (r.status === 401 || r.status === 403 && /forbidden|unauthorized/i.test(body))
+      throw new Error("Alpaca rejected the keys. Check that you copied both paper-trading keys correctly.");
+    throw new Error(`Alpaca returned ${r.status} for ${new URL(url).pathname}: ${body}`);
+  }
+  return r.json();
+}
+function chunks(a, n) { const o = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; }
+
+async function getBars(symbols, params, label, report = status) {
+  const out = {};
+  const batches = chunks(symbols, 400);
+  for (let b = 0; b < batches.length; b++) {
+    report(`${label} (${b + 1} of ${batches.length})…`);
+    let token = null;
+    do {
+      const q = new URLSearchParams({ symbols: batches[b].join(","), limit: "10000", feed: "sip", adjustment: "raw", ...params });
+      if (token) q.set("page_token", token);
+      const j = await api(`${DATA}/v2/stocks/bars?${q}`);
+      for (const [s, bars] of Object.entries(j.bars || {})) (out[s] ||= []).push(...bars);
+      token = j.next_page_token;
+    } while (token);
+  }
+  return out;
+}
+
+async function getNews(symbols) {
+  const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
+  const bySym = {};
+  for (const batch of chunks(symbols, 20)) {
+    let token = null, pages = 0;
+    do {
+      const q = new URLSearchParams({ symbols: batch.join(","), start: since, limit: "50", sort: "desc" });
+      if (token) q.set("page_token", token);
+      const j = await api(`${DATA}/v1beta1/news?${q}`);
+      for (const n of j.news || []) for (const s of n.symbols || [])
+        if (batch.includes(s)) (bySym[s] ||= []).push({ headline: n.headline || "", url: n.url || "" });
+      token = j.next_page_token;
+    } while (token && ++pages < 3);
+  }
+  return bySym;
+}
+
+function scoreNews(items) {
+  const text = items.map(n => n.headline).join(" ").toLowerCase();
+  let pts = 0, flags = [];
+  for (const [k, v] of Object.entries(CATALYSTS)) if (text.includes(k)) pts += v;
+  for (const [k, v] of Object.entries(RED_FLAGS)) if (text.includes(k)) { pts += v; flags.push(k); }
+  return { pts, flags };
+}
+
+// ---------- scan ----------
+function status(msg, err = false) { $("status").textContent = msg; $("status").className = err ? "err" : ""; }
+
+async function scan() {
+  if (!$("keyId").value.trim() || !$("secret").value.trim()) {
+    $("keysBox").open = true; status("Enter both Alpaca keys first.", true); return;
+  }
+  save("apca_key", $("keyId").value.trim()); save("apca_secret", $("secret").value.trim());
+  const now = et();
+  if (now.wd === "Sat" || now.wd === "Sun") { status("Market is closed today (weekend).", true); return; }
+  const dataEnd = new Date(Date.now() - 16 * 60000);           // free plan: no consolidated data from the last 15 min
+  const pmStart = etToday(4, 0), open = etToday(9, 30), midnight = etToday(0, 0);
+  if (dataEnd <= pmStart) { status("Pre-market data starts after 4:15 AM ET. Try again later.", true); return; }
+
+  $("runBtn").disabled = true;
+  const t0 = Date.now();
+  try {
+    status("Loading the list of US stocks…");
+    const assets = await api(`${TRADE}/v2/assets?status=active&asset_class=us_equity`);
+    const exch = new Set(["NASDAQ", "NYSE", "AMEX", "ARCA", "BATS"]);
+    const symbols = assets.filter(a => a.tradable && exch.has(a.exchange) && /^[A-Z]{1,5}$/.test(a.symbol)).map(a => a.symbol);
+
+    // 1. Daily history: previous close and average volume
+    const daily = await getBars(symbols, { timeframe: "1Day",
+      start: new Date(midnight.getTime() - 40 * 86400000).toISOString(),
+      end: new Date(midnight.getTime() - 60000).toISOString() }, "Checking prices and volume");
+    const base = {};
+    for (const [s, bars] of Object.entries(daily)) {
+      if (bars.length < 5) continue;
+      const prev = bars[bars.length - 1].c;
+      const recent = bars.slice(-20);
+      const avg = recent.reduce((a, b) => a + b.v, 0) / recent.length;
+      if (prev < MAX_PRICE && prev >= MIN_PRICE * 0.5 && avg >= MIN_AVG_VOL) base[s] = { prev, avg };
+    }
+    const cands = Object.keys(base);
+    if (!cands.length) throw new Error("No stocks matched the under-$5 and volume filters.");
+
+    // 2. Today's pre-market bars (consolidated, 15-min delayed)
+    const pm = await getBars(cands, { timeframe: "30Min",
+      start: pmStart.toISOString(), end: (dataEnd < open ? dataEnd : open).toISOString() },
+      `Reading pre-market trading for ${cands.length} stocks`);
+    let rows = [];
+    for (const s of cands) {
+      const bars = (pm[s] || []).filter(b => new Date(b.t) < open);
+      if (!bars.length) continue;
+      const pmVol = bars.reduce((a, b) => a + b.v, 0);
+      rows.push({ ticker: s, price: bars[bars.length - 1].c, prev: base[s].prev, pmVol,
+                  volPct: pmVol / base[s].avg * 100 });
+    }
+    if (!rows.length) throw new Error("No pre-market trading found yet. On a market holiday this list stays empty.");
+
+    // Pre-rank, then refresh price with latest IEX trade for the shortlist
+    rows.forEach(r => r.gap = (r.price / r.prev - 1) * 100);
+    rows.sort((a, b) => pre(b) - pre(a));
+    rows = rows.slice(0, DEEP_DIVE * 2);
+    status("Getting the latest trades…");
+    try {
+      const lt = await api(`${DATA}/v2/stocks/trades/latest?feed=iex&symbols=${rows.map(r => r.ticker).join(",")}`);
+      for (const r of rows) {
+        const t = lt.trades?.[r.ticker];
+        if (t && new Date(t.t) >= pmStart && new Date(t.t) > dataEnd) r.price = t.p;
+      }
+    } catch { /* optional refinement */ }
+    rows.forEach(r => r.gap = (r.price / r.prev - 1) * 100);
+    rows = rows.filter(r => r.price >= MIN_PRICE && r.price < MAX_PRICE && r.pmVol >= MIN_PM_VOL);
+    rows.sort((a, b) => pre(b) - pre(a));
+    rows = rows.slice(0, DEEP_DIVE);
+    if (!rows.length) throw new Error("No stocks under $5 had enough pre-market volume yet.");
+
+    // 3. News catalysts
+    status(`Checking news on the top ${rows.length} movers…`);
+    const news = await getNews(rows.map(r => r.ticker));
+    for (const r of rows) {
+      const items = news[r.ticker] || [];
+      const { pts, flags } = scoreNews(items);
+      r.newsPts = pts; r.flags = flags; r.headline = items[0]?.headline || ""; r.url = items[0]?.url || "";
+      r.score = Math.min(r.gap, 60) * 0.6 + Math.min(r.volPct, 50) * 0.4 + pts * 4;
+    }
+    rows.sort((a, b) => b.score - a.score);
+    lastResults = rows;
+    render(rows.slice(0, SHOW_TOP));
+    savePicks(et().date, rows.slice(0, SHOW_TOP));
+    const done = et();
+    status(`Scanned ${symbols.length.toLocaleString()} stocks in ${Math.round((Date.now() - t0) / 1000)}s. Results as of ${fmtTime(done)} ET (consolidated data through ${fmtTime(et(dataEnd))}).`);
+    $("csvBtn").disabled = false;
+  } catch (e) {
+    const msg = e instanceof TypeError
+      ? "Couldn’t reach Alpaca. Check your internet connection. If it keeps failing, your browser may be blocking requests from a file opened on your computer."
+      : e.message;
+    status(msg, true);
+  } finally {
+    $("runBtn").disabled = false;
+  }
+}
+function pre(r) { return Math.min(r.gap, 60) + 10 * Math.log10(1 + r.volPct); }
+function fmtTime(t) { const h = t.h % 12 || 12; return `${h}:${String(t.min).padStart(2, "0")} ${t.h < 12 ? "AM" : "PM"}`; }
+
+// ---------- output ----------
+const money = v => "$" + v.toFixed(v < 1 ? 4 : 2);
+const big = v => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? Math.round(v / 1e3) + "K" : String(v);
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function render(rows) {
+  const maxGap = Math.max(...rows.map(r => Math.max(r.gap, 0)), 1);
+  $("rows").innerHTML = rows.map((r, i) => {
+    const w = Math.max(r.gap, 0) / maxGap * 100;
+    const flag = r.flags.length ? `<span class="flag">Warning: ${esc(r.flags.join(", "))}</span><br>` : "";
+    const head = r.headline ? (r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.headline)}</a>` : esc(r.headline)) : "No news in the last 36 hours";
+    return `<tr>
+      <td class="l rank">${i + 1}</td>
+      <td class="l tk"><a href="https://finviz.com/quote.ashx?t=${r.ticker}" target="_blank" rel="noopener">${r.ticker}</a></td>
+      <td>${money(r.price)}</td><td>${money(r.prev)}</td>
+      <td class="gap"><i style="width:calc(${w}% - 24px)"></i><span>${r.gap >= 0 ? "+" : ""}${r.gap.toFixed(1)}%</span></td>
+      <td>${big(r.pmVol)}</td><td>${r.volPct.toFixed(0)}%</td>
+      <td class="l news">${flag}${head}</td>
+      <td class="score">${r.score.toFixed(1)}</td></tr>`;
+  }).join("");
+  $("tbl").hidden = false; $("empty").hidden = true;
+}
+
+function downloadCsv() {
+  const cols = ["ticker", "price", "prev", "gap", "pmVol", "volPct", "newsPts", "headline", "score"];
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [cols.join(",")].concat(lastResults.map(r => cols.map(c =>
+    typeof r[c] === "number" ? +r[c].toFixed(4) : q(r[c])).join(",")));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  a.download = `premarket-${et().date}.csv`;
+  a.click();
+}
+
+// ---------- saved picks and review ----------
+function savedDates() { try { return JSON.parse(load("pick_dates") || "[]"); } catch { return []; } }
+function savePicks(date, rows) {
+  save("picks:" + date, JSON.stringify(rows.map(r => ({ ticker: r.ticker, pmPrice: +r.price.toFixed(4),
+    gap: +r.gap.toFixed(1), score: +r.score.toFixed(1) }))));
+  const dates = savedDates();
+  if (!dates.includes(date)) { dates.push(date); dates.sort(); save("pick_dates", JSON.stringify(dates)); }
+  fillDates();
+}
+function fillDates() {
+  const d = savedDates().slice().reverse();
+  $("rvDate").innerHTML = d.length ? d.map(x => `<option value="${x}">${x}</option>`).join("")
+                                   : `<option value="">No saved scans yet</option>`;
+}
+const pct = v => `<span class="${v >= 0 ? "pos" : "neg"}">${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%</span>`;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+async function review() {
+  const rs = (m, err = false) => { $("rvStatus").innerHTML = m; $("rvStatus").className = err ? "err" : ""; };
+  const date = $("rvDate").value;
+  if (!date) { rs("Run a scan first. Each scan’s picks are saved here so you can check them later.", true); return; }
+  if (!$("keyId").value.trim() || !$("secret").value.trim()) { $("keysBox").open = true; rs("Enter both Alpaca keys first.", true); return; }
+  let picks;
+  try { picks = JSON.parse(load("picks:" + date)); } catch { picks = null; }
+  if (!picks?.length) { rs("No saved picks for that day.", true); return; }
+  const N = clamp(Math.round(+$("rvN").value || 5), 1, picks.length);
+  const T = clamp(+$("rvT").value || 15, 1, 200), S = clamp(+$("rvS").value || 7, 1, 90);
+  picks = picks.slice(0, N);
+
+  const openT = etOn(date, 9, 30), closeT = etOn(date, 16, 0);
+  const limit = new Date(Date.now() - 16 * 60000);   // free plan: consolidated data is 15 min delayed
+  if (limit <= new Date(openT.getTime() + 5 * 60000)) { rs("That day’s session hasn’t started yet. Results are available about 20 minutes after the open.", true); return; }
+  const end = limit < closeT ? limit : closeT, partial = end < closeT;
+
+  $("rvBtn").disabled = true;
+  try {
+    const bars = await getBars(picks.map(p => p.ticker),
+      { timeframe: "5Min", start: openT.toISOString(), end: end.toISOString() }, "Loading the day’s trading", rs);
+    const out = picks.map(p => {
+      const b = (bars[p.ticker] || []).filter(x => { const t = new Date(x.t); return t >= openT && t < closeT; });
+      if (!b.length) return { ticker: p.ticker, missing: true };
+      const open = b[0].o, high = Math.max(...b.map(x => x.h)), last = b[b.length - 1].c;
+      const tgt = open * (1 + T / 100), stp = open * (1 - S / 100);
+      let outcome = "none", result = (last / open - 1) * 100;
+      for (const x of b) {
+        const ht = x.h >= tgt, hs = x.l <= stp;
+        if (ht && hs) { outcome = "unclear"; result = null; break; }
+        if (ht) { outcome = "target"; result = T; break; }
+        if (hs) { outcome = "stop"; result = -S; break; }
+      }
+      return { ticker: p.ticker, open, highPct: (high / open - 1) * 100, closePct: (last / open - 1) * 100, outcome, result };
+    });
+
+    $("rvRows").innerHTML = out.map(r => {
+      if (r.missing) return `<tr><td class="l tk"><a href="https://finviz.com/quote.ashx?t=${r.ticker}" target="_blank" rel="noopener">${r.ticker}</a></td><td colspan="4" class="l news">No trades found for this day</td></tr>`;
+      const res = { target: `Sold at ${pct(T)}`, stop: `Stopped out at ${pct(-S)}`,
+        unclear: "Hit both within the same 5 minutes",
+        none: `${partial ? "Still holding" : "Held to close"}: ${pct(r.closePct)}` }[r.outcome];
+      return `<tr><td class="l tk"><a href="https://finviz.com/quote.ashx?t=${r.ticker}" target="_blank" rel="noopener">${r.ticker}</a></td>
+        <td>${money(r.open)}</td><td>${pct(r.highPct)}</td><td>${pct(r.closePct)}</td><td class="l">${res}</td></tr>`;
+    }).join("");
+    $("rvWrap").hidden = false;
+
+    const got = out.filter(r => !r.missing);
+    const hits = got.filter(r => r.highPct >= T).length;
+    const counted = got.filter(r => r.result !== null);
+    const avg = counted.length ? counted.reduce((a, r) => a + r.result, 0) / counted.length : 0;
+    const wins = got.filter(r => r.outcome === "target").length, stops = got.filter(r => r.outcome === "stop").length;
+    rs(`<strong>${hits} of ${got.length}</strong> rose ${T}% or more above the open at some point${partial ? " so far today" : ""}. ` +
+       `With a ${T}% target and ${S}% stop, the average result was <strong>${avg >= 0 ? "+" : "−"}${Math.abs(avg).toFixed(1)}% per pick</strong> ` +
+       `(${wins} hit the target, ${stops} stopped out). Real stop fills on fast drops are often worse than the stop price.`);
+  } catch (e) {
+    rs(e instanceof TypeError ? "Couldn’t reach Alpaca. Check your internet connection and try again." : e.message, true);
+  } finally {
+    $("rvBtn").disabled = false;
+  }
+}
+
+fillDates();
+$("rvBtn").addEventListener("click", review);
+$("runBtn").addEventListener("click", scan);
+$("csvBtn").addEventListener("click", downloadCsv);
+
+// ---------- auto-run while the tab is open ----------
+setInterval(() => {
+  if (!$("autoRun").checked) return;
+  const t = et();
+  if (["Sat", "Sun"].includes(t.wd)) return;
+  const mins = t.h * 60 + t.min;
+  if (mins >= 8 * 60 + 40 && mins < 9 * 60 + 30 && load("auto_last") !== t.date) {
+    save("auto_last", t.date);
+    scan();
+  }
+}, 30000);
+</script>
+</body>
+</html>
