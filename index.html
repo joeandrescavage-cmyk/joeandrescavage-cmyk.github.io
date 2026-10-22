@@ -105,7 +105,7 @@
 <body>
 <main>
   <h1>Pre-market scanner</h1>
-  <p class="sub">Finds US stocks under $5 with the strongest pre-market gap, unusual pre-market volume, and fresh news, then ranks them. Best run between 8:00 and 9:15 AM Eastern.</p>
+  <p class="sub">Two scans for US stocks under $5. <strong>Tomorrow’s watchlist</strong> (run in the evening) finds after-hours movers, fresh news since the close, and strong closers before the morning crowd. <strong>Morning scan</strong> (run 8:00–9:15 AM Eastern) shows which ones are actually gapping with real volume.</p>
 
   <details class="keys" id="keysBox">
     <summary>Alpaca API keys</summary>
@@ -117,17 +117,15 @@
   </details>
 
   <div class="bar">
-    <button id="runBtn">Run scan</button>
+    <button id="watchBtn">Tomorrow’s watchlist</button>
+    <button id="runBtn">Morning scan</button>
     <button class="quiet" id="csvBtn" disabled>Download CSV</button>
     <label class="auto"><input type="checkbox" id="autoRun"> Run automatically at 8:40 AM ET on weekdays while this tab is open</label>
   </div>
 
-  <div id="status">Enter your keys, then run the scan.</div>
+  <div id="status">Enter your keys, then run a scan.</div>
   <div class="tablewrap"><div class="empty" id="empty">No results yet.</div><table id="tbl" hidden>
-    <thead><tr>
-      <th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Prev close</th><th>Gap</th>
-      <th>Pre-mkt volume</th><th>% of avg day</th><th class="l">Latest news</th><th>Score</th>
-    </tr></thead>
+    <thead id="head"></thead>
     <tbody id="rows"></tbody>
   </table></div>
 
@@ -168,7 +166,7 @@ const RED_FLAGS = { "offering":-4, "registered direct":-4, "dilution":-3, "warra
   "going concern":-4, "misses":-2 };
 
 const $ = id => document.getElementById(id);
-let lastResults = [];
+let lastResults = [], lastMode = "premarket";
 
 // ---------- storage (local conveniences only) ----------
 function load(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }
@@ -232,8 +230,8 @@ async function getBars(symbols, params, label, report = status) {
   return out;
 }
 
-async function getNews(symbols) {
-  const since = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
+async function getNews(symbols, sinceDate = new Date(Date.now() - 36 * 3600 * 1000)) {
+  const since = sinceDate.toISOString();
   const bySym = {};
   for (const batch of chunks(symbols, 20)) {
     let token = null, pages = 0;
@@ -242,7 +240,7 @@ async function getNews(symbols) {
       if (token) q.set("page_token", token);
       const j = await api(`${DATA}/v1beta1/news?${q}`);
       for (const n of j.news || []) for (const s of n.symbols || [])
-        if (batch.includes(s)) (bySym[s] ||= []).push({ headline: n.headline || "", url: n.url || "" });
+        if (batch.includes(s)) (bySym[s] ||= []).push({ headline: n.headline || "", url: n.url || "", at: new Date(n.created_at || 0) });
       token = j.next_page_token;
     } while (token && ++pages < 3);
   }
@@ -271,13 +269,10 @@ async function scan() {
   const pmStart = etToday(4, 0), open = etToday(9, 30), midnight = etToday(0, 0);
   if (dataEnd <= pmStart) { status("Pre-market data starts after 4:15 AM ET. Try again later.", true); return; }
 
-  $("runBtn").disabled = true;
+  $("runBtn").disabled = $("watchBtn").disabled = true;
   const t0 = Date.now();
   try {
-    status("Loading the list of US stocks…");
-    const assets = await api(`${TRADE}/v2/assets?status=active&asset_class=us_equity`);
-    const exch = new Set(["NASDAQ", "NYSE", "AMEX", "ARCA", "BATS"]);
-    const symbols = assets.filter(a => a.tradable && exch.has(a.exchange) && /^[A-Z]{1,5}$/.test(a.symbol)).map(a => a.symbol);
+    const symbols = await getSymbols();
 
     // 1. Daily history: previous close and average volume
     const daily = await getBars(symbols, { timeframe: "1Day",
@@ -336,7 +331,7 @@ async function scan() {
       r.score = Math.min(r.gap, 60) * 0.6 + Math.min(r.volPct, 50) * 0.4 + pts * 4;
     }
     rows.sort((a, b) => b.score - a.score);
-    lastResults = rows;
+    lastResults = rows; lastMode = "premarket";
     render(rows.slice(0, SHOW_TOP));
     savePicks(et().date, rows.slice(0, SHOW_TOP));
     const done = et();
@@ -348,7 +343,7 @@ async function scan() {
       : e.message;
     status(msg, true);
   } finally {
-    $("runBtn").disabled = false;
+    $("runBtn").disabled = $("watchBtn").disabled = false;
   }
 }
 function pre(r) { return Math.min(r.gap, 60) + 10 * Math.log10(1 + r.volPct); }
@@ -359,7 +354,15 @@ const money = v => "$" + v.toFixed(v < 1 ? 4 : 2);
 const big = v => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? Math.round(v / 1e3) + "K" : String(v);
 const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+const MORNING_HEAD = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Prev close</th><th>Gap</th>
+  <th>Pre-mkt volume</th><th>% of avg day</th><th class="l">Latest news</th><th>Score</th></tr>`;
+function newsCell(r) {
+  const flag = r.flags.length ? `<span class="flag">Warning: ${esc(r.flags.join(", "))}</span><br>` : "";
+  const head = r.headline ? (r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.headline)}</a>` : esc(r.headline)) : "No news in the last 36 hours";
+  return flag + head;
+}
 function render(rows) {
+  $("head").innerHTML = MORNING_HEAD;
   const maxGap = Math.max(...rows.map(r => Math.max(r.gap, 0)), 1);
   $("rows").innerHTML = rows.map((r, i) => {
     const w = Math.max(r.gap, 0) / maxGap * 100;
@@ -378,14 +381,133 @@ function render(rows) {
 }
 
 function downloadCsv() {
-  const cols = ["ticker", "price", "prev", "gap", "pmVol", "volPct", "newsPts", "headline", "score"];
+  if (!lastResults.length) return;
+  const cols = Object.keys(lastResults[0]).filter(k => !["flags", "url"].includes(k));
   const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const lines = [cols.join(",")].concat(lastResults.map(r => cols.map(c =>
     typeof r[c] === "number" ? +r[c].toFixed(4) : q(r[c])).join(",")));
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
-  a.download = `premarket-${et().date}.csv`;
+  a.download = `${lastMode}-${et().date}.csv`;
   a.click();
+}
+
+// ---------- shared: list of tradable US stocks ----------
+async function getSymbols() {
+  status("Loading the list of US stocks…");
+  const assets = await api(`${TRADE}/v2/assets?status=active&asset_class=us_equity`);
+  const exch = new Set(["NASDAQ", "NYSE", "AMEX", "ARCA", "BATS"]);
+  return assets.filter(a => a.tradable && exch.has(a.exchange) && /^[A-Z]{1,5}$/.test(a.symbol)).map(a => a.symbol);
+}
+
+// ---------- evening: tomorrow's watchlist ----------
+async function watchlist() {
+  if (!$("keyId").value.trim() || !$("secret").value.trim()) {
+    $("keysBox").open = true; status("Enter both Alpaca keys first.", true); return;
+  }
+  save("apca_key", $("keyId").value.trim()); save("apca_secret", $("secret").value.trim());
+  $("watchBtn").disabled = $("runBtn").disabled = true;
+  const t0 = Date.now();
+  try {
+    const symbols = await getSymbols();
+    const dataEnd = new Date(Date.now() - 16 * 60000);
+    const midnight = etToday(0, 0);
+
+    // 1. Daily bars through the latest session: find that session, prior close, and average volume
+    const daily = await getBars(symbols, { timeframe: "1Day",
+      start: new Date(midnight.getTime() - 40 * 86400000).toISOString(), end: dataEnd.toISOString() },
+      "Checking prices and volume");
+    let D = "";
+    for (const bars of Object.values(daily)) if (bars.length) { const d = et(new Date(bars[bars.length - 1].t)).date; if (d > D) D = d; }
+    if (!D) throw new Error("No recent trading data found.");
+    const open = etOn(D, 9, 30), close = etOn(D, 16, 0), ahEnd = etOn(D, 20, 0);
+    if (dataEnd < new Date(close.getTime())) throw new Error("Today’s session isn’t over yet. Run the watchlist after 4:15 PM Eastern.");
+
+    const base = {};
+    for (const [s, bars] of Object.entries(daily)) {
+      const last = bars[bars.length - 1];
+      if (!last || et(new Date(last.t)).date !== D) continue;
+      const prior = bars.slice(0, -1);
+      if (prior.length < 5) continue;
+      const prev = prior[prior.length - 1].c;
+      const recent = prior.slice(-20);
+      const avg = recent.reduce((a, b) => a + b.v, 0) / recent.length;
+      if (prev >= 0.25 && last.c < 7 && avg >= MIN_AVG_VOL) base[s] = { prev, avg };
+    }
+    const cands = Object.keys(base);
+    if (!cands.length) throw new Error("No stocks matched the price and volume filters.");
+
+    // 2. The session and after-hours trading in 30-minute bars
+    const end = dataEnd < ahEnd ? dataEnd : ahEnd;
+    const intraday = await getBars(cands, { timeframe: "30Min", start: open.toISOString(), end: end.toISOString() },
+      `Reading today’s session and after-hours for ${cands.length} stocks`);
+    let rows = [];
+    for (const s of cands) {
+      const bars = intraday[s] || [];
+      const reg = bars.filter(b => { const t = new Date(b.t); return t >= open && t < close; });
+      if (!reg.length) continue;
+      const ah = bars.filter(b => new Date(b.t) >= close);
+      const cl = reg[reg.length - 1].c, hi = Math.max(...reg.map(b => b.h)), lo = Math.min(...reg.map(b => b.l));
+      const regVol = reg.reduce((a, b) => a + b.v, 0), ahVol = ah.reduce((a, b) => a + b.v, 0);
+      const last = ah.length ? ah[ah.length - 1].c : cl;
+      if (last < MIN_PRICE || last >= MAX_PRICE) continue;
+      const r = {
+        ticker: s, price: last, close: cl,
+        dayChg: (cl / base[s].prev - 1) * 100,
+        ahChg: (last / cl - 1) * 100, ahVol,
+        volX: regVol / base[s].avg,
+        nearHigh: hi > lo ? (cl - lo) / (hi - lo) * 100 : 50,
+      };
+      const ahPts = Math.min(Math.max(r.ahChg, 0), 50) * (ahVol >= 20000 ? 0.8 : 0.3);
+      const closerPts = r.dayChg > 0 && r.volX >= 2
+        ? r.nearHigh / 100 * 15 + Math.min(r.volX, 10) * 1.5 + Math.min(r.dayChg, 50) * 0.2 : 0;
+      r.base = ahPts + closerPts;
+      rows.push(r);
+    }
+    if (!rows.length) throw new Error("No stocks under $5 traded in the latest session.");
+    rows.sort((a, b) => b.base - a.base);
+    rows = rows.slice(0, DEEP_DIVE);
+
+    // 3. News, with extra weight for stories after the close
+    status(`Checking news on the top ${rows.length} candidates…`);
+    const news = await getNews(rows.map(r => r.ticker));
+    for (const r of rows) {
+      const items = news[r.ticker] || [];
+      const { pts, flags } = scoreNews(items);
+      const fresh = items.filter(n => n.at >= close);
+      r.newsPts = pts; r.flags = flags;
+      r.afterClose = fresh.length > 0;
+      const top = fresh[0] || items[0];
+      r.headline = top?.headline || ""; r.url = top?.url || "";
+      r.score = r.base + pts * 4 + (r.afterClose && pts > 0 ? 8 : 0);
+      delete r.base;
+    }
+    rows.sort((a, b) => b.score - a.score);
+    lastResults = rows; lastMode = "watchlist";
+    renderWatch(rows.slice(0, SHOW_TOP));
+    status(`Watchlist for the session after ${D}: scanned ${symbols.length.toLocaleString()} stocks in ${Math.round((Date.now() - t0) / 1000)}s, data through ${fmtTime(et(end))} ET. Run the morning scan before the open to see which ones are actually gapping.`);
+    $("csvBtn").disabled = false;
+  } catch (e) {
+    status(e instanceof TypeError ? "Couldn’t reach Alpaca. Check your internet connection and try again." : e.message, true);
+  } finally {
+    $("watchBtn").disabled = $("runBtn").disabled = false;
+  }
+}
+
+function renderWatch(rows) {
+  $("head").innerHTML = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Last price</th><th>Today</th>
+    <th>After hours</th><th>Volume vs avg</th><th>Closed near high</th><th class="l">Latest news</th><th>Score</th></tr>`;
+  const signed = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+  $("rows").innerHTML = rows.map((r, i) => `<tr>
+      <td class="l rank">${i + 1}</td>
+      <td class="l tk"><a href="https://finviz.com/quote.ashx?t=${r.ticker}" target="_blank" rel="noopener">${r.ticker}</a></td>
+      <td>${money(r.price)}</td>
+      <td class="${r.dayChg >= 0 ? "pos" : "neg"}">${signed(r.dayChg)}</td>
+      <td class="${r.ahChg >= 0 ? "pos" : "neg"}">${signed(r.ahChg)}<br><span class="news">${big(r.ahVol)} shares</span></td>
+      <td>${r.volX.toFixed(1)}×</td><td>${r.nearHigh.toFixed(0)}%</td>
+      <td class="l news">${r.afterClose ? '<span class="flag" style="background:var(--up-soft);color:var(--up)">After close</span><br>' : ""}${newsCell(r)}</td>
+      <td class="score">${r.score.toFixed(1)}</td></tr>`).join("");
+  $("tbl").hidden = false; $("empty").hidden = true;
 }
 
 // ---------- saved picks and review ----------
@@ -469,6 +591,7 @@ async function review() {
 fillDates();
 $("rvBtn").addEventListener("click", review);
 $("runBtn").addEventListener("click", scan);
+$("watchBtn").addEventListener("click", watchlist);
 $("csvBtn").addEventListener("click", downloadCsv);
 
 // ---------- auto-run while the tab is open ----------
