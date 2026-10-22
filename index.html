@@ -240,7 +240,7 @@ async function getNews(symbols, sinceDate = new Date(Date.now() - 36 * 3600 * 10
       const q = new URLSearchParams({ symbols: batch.join(","), start: since, limit: "50", sort: "desc" });
       if (token) q.set("page_token", token);
       const j = await api(`${DATA}/v1beta1/news?${q}`);
-      for (const n of j.news || []) for (const s of n.symbols || [])
+      for (const n of j.news || []) if (isCompanyNews(n)) for (const s of n.symbols || [])
         if (batch.includes(s)) (bySym[s] ||= []).push({ headline: n.headline || "", url: n.url || "", at: new Date(n.created_at || 0) });
       token = j.next_page_token;
     } while (token && ++pages < 3);
@@ -248,6 +248,11 @@ async function getNews(symbols, sinceDate = new Date(Date.now() - 36 * 3600 * 10
   return bySym;
 }
 
+// Market roundups ("12 stocks moving…", "Nasdaq down 400 points…") mention many tickers but aren’t a catalyst
+const ROUNDUP = /stocks? (moving|to watch|making|on the move)|movers|top (gainers|losers)|biggest (gainers|losers|movers)|here are \d+|\d+ (stocks|companies)|nasdaq (up|down|jumps|falls|rises|drops|slips|gains)|dow (up|down|jumps|falls|rises|drops|slips|gains)|s&p 500 (up|down)|(pre-?market|intraday|after-?market|mid-?day) session|market (update|wrap)|earnings call transcript/i;
+function isCompanyNews(n) {
+  return (n.symbols || []).length <= 3 && !ROUNDUP.test(n.headline || "");
+}
 function scoreNews(items) {
   const text = items.map(n => n.headline).join(" ").toLowerCase();
   let pts = 0, flags = [];
@@ -273,20 +278,9 @@ async function scan() {
   $("runBtn").disabled = $("watchBtn").disabled = true;
   const t0 = Date.now();
   try {
-    const symbols = await getSymbols();
-
-    // 1. Daily history: previous close and average volume
-    const daily = await getBars(symbols, { timeframe: "1Day",
-      start: new Date(midnight.getTime() - 40 * 86400000).toISOString(),
-      end: new Date(midnight.getTime() - 60000).toISOString() }, "Checking prices and volume");
-    const base = {};
-    for (const [s, bars] of Object.entries(daily)) {
-      if (bars.length < 5) continue;
-      const prev = bars[bars.length - 1].c;
-      const recent = bars.slice(-20);
-      const avg = recent.reduce((a, b) => a + b.v, 0) / recent.length;
-      if (prev < MAX_PRICE && prev >= MIN_PRICE * 0.5 && avg >= MIN_AVG_VOL) base[s] = { prev, avg };
-    }
+    // 1. Daily history: previous close and average volume (saved once per day)
+    const all = await getBase();
+    const base = Object.fromEntries(Object.entries(all).filter(([, b]) => b.prev < MAX_PRICE));
     const cands = Object.keys(base);
     if (!cands.length) throw new Error("No stocks matched the under-$5 and volume filters.");
 
@@ -336,7 +330,7 @@ async function scan() {
     render(rows.slice(0, SHOW_TOP));
     savePicks(et().date, rows.slice(0, SHOW_TOP));
     const done = et();
-    status(`Scanned ${symbols.length.toLocaleString()} stocks in ${Math.round((Date.now() - t0) / 1000)}s. Results as of ${fmtTime(done)} ET (consolidated data through ${fmtTime(et(dataEnd))}).`);
+    status(`Checked ${cands.length.toLocaleString()} active stocks under $5 in ${Math.round((Date.now() - t0) / 1000)}s. Results as of ${fmtTime(done)} ET (consolidated data through ${fmtTime(et(dataEnd))}).`);
     $("csvBtn").disabled = false;
   } catch (e) {
     const msg = e instanceof TypeError
@@ -391,6 +385,36 @@ function downloadCsv() {
   a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
   a.download = `${lastMode}-${et().date}.csv`;
   a.click();
+}
+
+// ---------- shared: price history, saved once per day ----------
+async function getBase() {
+  const key = "base:" + et().date;
+  try {
+    const c = JSON.parse(load(key) || "null");
+    if (c && Object.keys(c).length) { status("Using today’s saved price history…"); return c; }
+  } catch {}
+  const symbols = await getSymbols();
+  const midnight = etToday(0, 0);
+  const daily = await getBars(symbols, { timeframe: "1Day",
+    start: new Date(midnight.getTime() - 40 * 86400000).toISOString(),
+    end: new Date(midnight.getTime() - 60000).toISOString() }, "Checking price history (first scan of the day only)");
+  const base = {};
+  for (const [s, bars] of Object.entries(daily)) {
+    if (bars.length < 5) continue;
+    const prev = bars[bars.length - 1].c;
+    const recent = bars.slice(-20);
+    const avg = recent.reduce((a, b) => a + b.v, 0) / recent.length;
+    if (prev >= 0.25 && prev < 10 && avg >= MIN_AVG_VOL) base[s] = { prev: +prev.toFixed(4), avg: Math.round(avg) };
+  }
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("base:") && k !== key) localStorage.removeItem(k);
+    }
+  } catch {}
+  save(key, JSON.stringify(base));
+  return base;
 }
 
 // ---------- shared: list of tradable US stocks ----------
@@ -529,18 +553,8 @@ async function nowScan() {
   btns.forEach(b => $(b).disabled = true);
   const t0 = Date.now();
   try {
-    const symbols = await getSymbols();
-    const daily = await getBars(symbols, { timeframe: "1Day",
-      start: new Date(midnight.getTime() - 40 * 86400000).toISOString(),
-      end: new Date(midnight.getTime() - 60000).toISOString() }, "Checking prices and volume");
-    const base = {};
-    for (const [s, bars] of Object.entries(daily)) {
-      if (bars.length < 5) continue;
-      const prev = bars[bars.length - 1].c;
-      const recent = bars.slice(-20);
-      const avg = recent.reduce((a, b) => a + b.v, 0) / recent.length;
-      if (prev >= 0.25 && prev < 6 && avg >= MIN_AVG_VOL) base[s] = { prev, avg };
-    }
+    const all = await getBase();
+    const base = Object.fromEntries(Object.entries(all).filter(([, b]) => b.prev < 6));
     const cands = Object.keys(base);
     if (!cands.length) throw new Error("No stocks matched the price and volume filters.");
 
@@ -559,10 +573,16 @@ async function nowScan() {
       if (vol < 100000) continue;
       const last = bars[bars.length - 1].c, hi = Math.max(...bars.map(b => b.h));
       const vwap = bars.reduce((a, b) => a + (b.vw || b.c) * b.v, 0) / vol;
-      const rv = (recent[s] || []).reduce((a, b) => a + b.v, 0);
+      const rb = recent[s] || [];
+      const perMin = base[s].avg / 390;
+      const rv = rb.reduce((a, b) => a + b.v, 0), top = rb.reduce((m, b) => Math.max(m, b.v), 0);
+      // Leave out the single biggest minute so one block trade can’t fake a surge
+      const adj = rb.length > 1 ? (rv - top) * mins / Math.max(1, mins - 1) : 0;
       rows.push({ ticker: s, price: last, dataPrice: last,
         dayChg: (last / base[s].prev - 1) * 100,
-        surge: rv / (base[s].avg / 390 * mins),
+        surge: adj / (perMin * mins),
+        busy: rb.filter(b => b.v >= 2 * perMin).length,
+        move15: rb.length ? (rb[rb.length - 1].c / rb[0].o - 1) * 100 : 0,
         nearHigh: last / hi * 100, vsVwap: (last / vwap - 1) * 100, dayVol: vol, liveMove: null });
     }
     rows = rows.filter(r => r.price >= MIN_PRICE && r.price < MAX_PRICE);
@@ -610,7 +630,9 @@ async function nowScan() {
 }
 
 function nowScore(r) {
-  let s = Math.min(r.surge, 10) * 3.5;                                   // volume surge, up to 35
+  let s = Math.min(r.surge, 10) * 3.5 * Math.min(1, r.busy / 5);         // volume surge, up to 35, needs heavy volume in several minutes
+  if (r.move15 < 0.5) s *= 0.5;                                          // volume without the price rising counts half
+  s += Math.min(Math.max(r.move15, 0), 5) * 2;                           // price rising over the last 15 minutes, up to 10
   s += r.nearHigh >= 98 ? 20 : r.nearHigh >= 95 ? 12 : r.nearHigh >= 90 ? 5 : 0;  // pressing the day’s high
   s += r.vsVwap > 0 ? 10 : 0;                                            // buyers in control
   s += Math.min(Math.max(r.dayChg, 0), 50) * 0.3;                        // already up today, up to 15
@@ -620,14 +642,15 @@ function nowScore(r) {
 
 function renderNow(rows) {
   $("head").innerHTML = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Today</th>
-    <th>Volume, last 15 min</th><th>From day’s high</th><th>vs. VWAP</th><th>Since data</th><th class="l">Latest news</th><th>Rating</th></tr>`;
+    <th>Volume, last 15 min</th><th>Move, last 15 min</th><th>From day’s high</th><th>vs. VWAP</th><th>Since data</th><th class="l">Latest news</th><th>Rating</th></tr>`;
   const signed = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
   $("rows").innerHTML = rows.map((r, i) => `<tr>
       <td class="l rank">${i + 1}</td>
       <td class="l tk"><a href="https://finviz.com/quote.ashx?t=${r.ticker}" target="_blank" rel="noopener">${r.ticker}</a></td>
       <td>${money(r.price)}</td>
       <td class="${r.dayChg >= 0 ? "pos" : "neg"}">${signed(r.dayChg)}</td>
-      <td>${r.surge.toFixed(1)}× normal</td>
+      <td>${r.surge.toFixed(1)}× normal<br><span class="news">${r.busy} busy minutes</span></td>
+      <td class="${r.move15 >= 0 ? "pos" : "neg"}">${signed(r.move15)}</td>
       <td>${r.nearHigh >= 99.95 ? "At high" : signed(r.nearHigh - 100)}</td>
       <td class="${r.vsVwap >= 0 ? "pos" : "neg"}">${signed(r.vsVwap)}</td>
       <td>${r.liveMove === null ? "—" : `<span class="${r.liveMove >= 0 ? "pos" : "neg"}">${signed(r.liveMove)}</span>`}</td>
