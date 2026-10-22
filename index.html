@@ -105,7 +105,7 @@
 <body>
 <main>
   <h1>Pre-market scanner</h1>
-  <p class="sub">Two scans for US stocks under $5. <strong>Tomorrow’s watchlist</strong> (run in the evening) finds after-hours movers, fresh news since the close, and strong closers before the morning crowd. <strong>Morning scan</strong> (run 8:00–9:15 AM Eastern) shows which ones are actually gapping with real volume.</p>
+  <p class="sub">Two scans for US stocks under $5. <strong>Tomorrow’s watchlist</strong> (run in the evening) finds after-hours movers, fresh news since the close, and strong closers before the morning crowd. <strong>Morning scan</strong> (run 8:00–9:15 AM Eastern) shows which ones are actually gapping with real volume. <strong>Right now</strong> (any time during market hours) rates which stocks are surging at the moment.</p>
 
   <details class="keys" id="keysBox">
     <summary>Alpaca API keys</summary>
@@ -119,6 +119,7 @@
   <div class="bar">
     <button id="watchBtn">Tomorrow’s watchlist</button>
     <button id="runBtn">Morning scan</button>
+    <button id="nowBtn">Right now</button>
     <button class="quiet" id="csvBtn" disabled>Download CSV</button>
     <label class="auto"><input type="checkbox" id="autoRun"> Run automatically at 8:40 AM ET on weekdays while this tab is open</label>
   </div>
@@ -510,6 +511,131 @@ function renderWatch(rows) {
   $("tbl").hidden = false; $("empty").hidden = true;
 }
 
+// ---------- during the day: momentum right now ----------
+async function nowScan() {
+  if (!$("keyId").value.trim() || !$("secret").value.trim()) {
+    $("keysBox").open = true; status("Enter both Alpaca keys first.", true); return;
+  }
+  save("apca_key", $("keyId").value.trim()); save("apca_secret", $("secret").value.trim());
+  const now = et();
+  if (now.wd === "Sat" || now.wd === "Sun") { status("Market is closed today (weekend).", true); return; }
+  const open = etToday(9, 30), close = etToday(16, 0), midnight = etToday(0, 0);
+  const dataEnd = new Date(Date.now() - 16 * 60000);   // free plan: full-market data is 15 minutes behind
+  if (dataEnd < new Date(open.getTime() + 60000)) {
+    status("Full-market data runs 15 minutes behind, so this scan starts working around 9:46 AM Eastern.", true); return;
+  }
+  const end = dataEnd < close ? dataEnd : close;
+  const btns = ["watchBtn", "runBtn", "nowBtn"];
+  btns.forEach(b => $(b).disabled = true);
+  const t0 = Date.now();
+  try {
+    const symbols = await getSymbols();
+    const daily = await getBars(symbols, { timeframe: "1Day",
+      start: new Date(midnight.getTime() - 40 * 86400000).toISOString(),
+      end: new Date(midnight.getTime() - 60000).toISOString() }, "Checking prices and volume");
+    const base = {};
+    for (const [s, bars] of Object.entries(daily)) {
+      if (bars.length < 5) continue;
+      const prev = bars[bars.length - 1].c;
+      const recent = bars.slice(-20);
+      const avg = recent.reduce((a, b) => a + b.v, 0) / recent.length;
+      if (prev >= 0.25 && prev < 6 && avg >= MIN_AVG_VOL) base[s] = { prev, avg };
+    }
+    const cands = Object.keys(base);
+    if (!cands.length) throw new Error("No stocks matched the price and volume filters.");
+
+    const day = await getBars(cands, { timeframe: "15Min", start: open.toISOString(), end: end.toISOString() },
+      `Reading today’s trading for ${cands.length} stocks`);
+    const recentStart = new Date(Math.max(open.getTime(), end.getTime() - 15 * 60000));
+    const recent = await getBars(cands, { timeframe: "1Min", start: recentStart.toISOString(), end: end.toISOString() },
+      "Checking the latest 15 minutes");
+    const mins = Math.max(1, (end - recentStart) / 60000);
+
+    let rows = [];
+    for (const s of cands) {
+      const bars = (day[s] || []).filter(b => { const t = new Date(b.t); return t >= open && t < close; });
+      if (!bars.length) continue;
+      const vol = bars.reduce((a, b) => a + b.v, 0);
+      if (vol < 100000) continue;
+      const last = bars[bars.length - 1].c, hi = Math.max(...bars.map(b => b.h));
+      const vwap = bars.reduce((a, b) => a + (b.vw || b.c) * b.v, 0) / vol;
+      const rv = (recent[s] || []).reduce((a, b) => a + b.v, 0);
+      rows.push({ ticker: s, price: last, dataPrice: last,
+        dayChg: (last / base[s].prev - 1) * 100,
+        surge: rv / (base[s].avg / 390 * mins),
+        nearHigh: last / hi * 100, vsVwap: (last / vwap - 1) * 100, dayVol: vol, liveMove: null });
+    }
+    rows = rows.filter(r => r.price >= MIN_PRICE && r.price < MAX_PRICE);
+    if (!rows.length) throw new Error("No stocks under $5 have traded enough yet today.");
+    rows.forEach(r => r.score = nowScore(r));
+    rows.sort((a, b) => b.score - a.score);
+    rows = rows.slice(0, DEEP_DIVE * 2);
+
+    status("Checking live prices…");
+    try {
+      const lt = await api(`${DATA}/v2/stocks/trades/latest?feed=iex&symbols=${rows.map(r => r.ticker).join(",")}`);
+      for (const r of rows) {
+        const t = lt.trades?.[r.ticker];
+        if (t && new Date(t.t) > end) { r.price = t.p; r.liveMove = (t.p / r.dataPrice - 1) * 100; }
+      }
+    } catch { /* live check is optional */ }
+    rows = rows.filter(r => r.price >= MIN_PRICE && r.price < MAX_PRICE);
+    rows.forEach(r => r.score = nowScore(r));
+    rows.sort((a, b) => b.score - a.score);
+    rows = rows.slice(0, DEEP_DIVE);
+
+    status(`Checking news on the top ${rows.length}…`);
+    const news = await getNews(rows.map(r => r.ticker), new Date(midnight.getTime() - 8 * 3600000));
+    const twoHours = new Date(Date.now() - 2 * 3600000);
+    for (const r of rows) {
+      const items = news[r.ticker] || [];
+      const { pts, flags } = scoreNews(items);
+      const fresh = items.some(n => n.at >= twoHours);
+      r.newsPts = pts; r.flags = flags; r.headline = items[0]?.headline || ""; r.url = items[0]?.url || "";
+      r.freshNews = fresh;
+      r.score += pts > 0 ? Math.min(pts * 2, 10) + (fresh ? 5 : 0) : pts < 0 ? -15 : 0;
+      r.score = Math.max(0, Math.min(100, r.score));
+      delete r.dataPrice;
+    }
+    rows.sort((a, b) => b.score - a.score);
+    lastResults = rows; lastMode = "rightnow";
+    renderNow(rows.slice(0, SHOW_TOP));
+    status(`Right now, as of ${fmtTime(et())} ET: full-market data through ${fmtTime(et(end))} (15 minutes behind on the free plan), with live prices checked on one exchange. Scanned in ${Math.round((Date.now() - t0) / 1000)}s.`);
+    $("csvBtn").disabled = false;
+  } catch (e) {
+    status(e instanceof TypeError ? "Couldn’t reach Alpaca. Check your internet connection and try again." : e.message, true);
+  } finally {
+    btns.forEach(b => $(b).disabled = false);
+  }
+}
+
+function nowScore(r) {
+  let s = Math.min(r.surge, 10) * 3.5;                                   // volume surge, up to 35
+  s += r.nearHigh >= 98 ? 20 : r.nearHigh >= 95 ? 12 : r.nearHigh >= 90 ? 5 : 0;  // pressing the day’s high
+  s += r.vsVwap > 0 ? 10 : 0;                                            // buyers in control
+  s += Math.min(Math.max(r.dayChg, 0), 50) * 0.3;                        // already up today, up to 15
+  if (r.liveMove !== null) s += r.liveMove >= 1 ? 10 : r.liveMove <= -3 ? -10 : 0;  // still going since the data
+  return s;
+}
+
+function renderNow(rows) {
+  $("head").innerHTML = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Today</th>
+    <th>Volume, last 15 min</th><th>From day’s high</th><th>vs. VWAP</th><th>Since data</th><th class="l">Latest news</th><th>Rating</th></tr>`;
+  const signed = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+  $("rows").innerHTML = rows.map((r, i) => `<tr>
+      <td class="l rank">${i + 1}</td>
+      <td class="l tk"><a href="https://finviz.com/quote.ashx?t=${r.ticker}" target="_blank" rel="noopener">${r.ticker}</a></td>
+      <td>${money(r.price)}</td>
+      <td class="${r.dayChg >= 0 ? "pos" : "neg"}">${signed(r.dayChg)}</td>
+      <td>${r.surge.toFixed(1)}× normal</td>
+      <td>${r.nearHigh >= 99.95 ? "At high" : signed(r.nearHigh - 100)}</td>
+      <td class="${r.vsVwap >= 0 ? "pos" : "neg"}">${signed(r.vsVwap)}</td>
+      <td>${r.liveMove === null ? "—" : `<span class="${r.liveMove >= 0 ? "pos" : "neg"}">${signed(r.liveMove)}</span>`}</td>
+      <td class="l news">${r.freshNews ? '<span class="flag" style="background:var(--up-soft);color:var(--up)">Last 2 hours</span><br>' : ""}${newsCell(r)}</td>
+      <td class="score">${Math.round(r.score)}</td></tr>`).join("");
+  $("tbl").hidden = false; $("empty").hidden = true;
+}
+
 // ---------- saved picks and review ----------
 function savedDates() { try { return JSON.parse(load("pick_dates") || "[]"); } catch { return []; } }
 function savePicks(date, rows) {
@@ -592,6 +718,7 @@ fillDates();
 $("rvBtn").addEventListener("click", review);
 $("runBtn").addEventListener("click", scan);
 $("watchBtn").addEventListener("click", watchlist);
+$("nowBtn").addEventListener("click", nowScan);
 $("csvBtn").addEventListener("click", downloadCsv);
 
 // ---------- auto-run while the tab is open ----------
