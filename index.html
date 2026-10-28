@@ -101,6 +101,19 @@
   .pos { color: var(--up); font-weight: 600; }
   .neg { color: var(--flag); font-weight: 600; }
   .muted { color: var(--muted); }
+  .quick { margin: 0 0 18px; }
+  .qcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .qc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+  .qc > span { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .qc b { font-size: 24px; line-height: 1.2; }
+  .qc.big { border-color: var(--accent); }
+  .qc.big b { font-size: 28px; }
+  .qc small { font-size: 12px; color: var(--muted); }
+  details.qlog { margin-top: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+  details.qlog summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  details.qlog .rvbar { margin-top: 10px; }
+  #dStatus { font-size: 14px; min-height: 1.4em; margin-bottom: 8px; }
+  #dStatus.err { color: var(--flag); }
   #posStatus, #tStatus { font-size: 14px; min-height: 1.5em; margin: 4px 0 10px; }
   #posStatus.err, #tStatus.err { color: var(--flag); }
   .panel { margin: 0 0 28px; }
@@ -149,6 +162,26 @@
 <main>
   <h1>Pre-market scanner</h1>
   <p class="sub">Scans for low-priced US stocks (set the price range below). <strong>Tomorrow’s watchlist</strong> (run in the evening) finds after-hours movers, fresh news since the close, and strong closers before the morning crowd. <strong>Morning scan</strong> (run 8:00–9:15 AM Eastern) shows which ones are actually gapping with real volume. <strong>Right now</strong> (any time during market hours) rates which stocks are surging at the moment.</p>
+
+  <section class="quick" id="dailySec">
+    <div class="qcards">
+      <div class="qc"><span>Account</span><b id="qVal">—</b><small id="qValSub"></small></div>
+      <div class="qc"><span>Today</span><b id="qToday">—</b><small id="qTodaySub"></small></div>
+      <div class="qc big"><span>Avg daily return</span><b id="qAvg">—</b><small id="qAvgSub"></small></div>
+      <div class="qc"><span>Total since start</span><b id="qTot">—</b><small id="qTotSub"></small></div>
+      <div class="qc"><span>Green days</span><b id="qWin">—</b><small id="qWinSub"></small></div>
+    </div>
+    <details class="qlog" id="dailyLog"><summary>Log today’s account value (after the close)</summary>
+      <div class="rvbar">
+        <label>Date<input type="date" id="dDate"></label>
+        <label>Account value $<input type="number" id="dVal" step="0.01" min="0"></label>
+        <label>Day change % from Schwab (optional)<input type="number" id="dPct" step="0.01"></label>
+        <button id="dSave">Save day</button>
+      </div>
+      <div id="dStatus" class="muted"></div>
+      <div id="dHist"></div>
+    </details>
+  </section>
 
   <details class="keys" id="keysBox">
     <summary>Alpaca API keys</summary>
@@ -956,7 +989,7 @@ function watchTable(tbodyId, extra) {
 
 // ---------- 4. Trade log (real and paper) ----------
 const SETUPS = ["News gap (pre-market)", "No-news gap", "News, hasn’t popped", "Momentum + news", "Momentum / chase",
-  "Breakout", "Bounce / dip", "After-hours mover", "Long shot", "Other"];
+  "Breakout", "Bounce / dip", "After-hours mover", "Long shot", "Before the scanner", "Other"];
 $("tSetup").innerHTML = SETUPS.map(s => `<option>${s}</option>`).join("");
 function loadTrades() { try { return JSON.parse(load("trades") || "[]"); } catch { return []; } }
 function saveTrades(t) { save("trades", JSON.stringify(t)); renderTrades(); renderPositions(); }
@@ -1083,7 +1116,7 @@ $("tExport").addEventListener("click", () => {
 const SEED = [
   ["TRON", 177, 1.4049, 1.45, 1.62, "2026-10-22", "Momentum / chase", "2026-10-23", 1.45, "Hit stop"],
   ["BATL", 143, 0.6946, 0.70, 0.80, "2026-10-22", "Other", "2026-10-22", 0.7992, "Hit target"],
-  ["XLAB", 30, 3.40, 3.16, 3.91, "2026-10-22", "Momentum + news", "2026-10-22", 4.395, "Hit target"],
+  ["XLAB", 30, 3.3988, 3.16, 3.91, "2026-10-22", "Momentum + news", "2026-10-22", 4.395, "Hit target"],
   ["NCPL", 60, 2.485, 2.40, 2.86, "2026-10-22", "Momentum / chase", "2026-10-22", 2.40, "Hit stop"],
   ["BKYI", 100, 3.56, 3.31, 4.09, "2026-10-23", "News gap (pre-market)", "2026-10-23", 3.70, "Sold early"],
   ["BKYI", 140, 3.5199, 3.45, 4.05, "2026-10-23", "News gap (pre-market)", "2026-10-23", 3.4514, "Hit stop"],
@@ -1096,7 +1129,8 @@ const SEED = [
 ];
 function seedTrades() {
   const have = loadTrades();
-  const add = SEED.filter(s => !have.some(t => t.ticker === s[0] && t.buyTime?.slice(0, 10) === s[5] && Math.abs(t.buy - s[2]) < 1e-6))
+  const add = SEED.filter(s => !have.some(t => t.ticker === s[0] && t.buyTime?.slice(0, 10) === s[5] && Math.abs(t.buy - s[2]) < 1e-6
+      && ((t.sell == null && s[8] == null) || (t.sell != null && s[8] != null && Math.abs(t.sell - s[8]) < 1e-6))))
     .map(([ticker, shares, buy, stop, target, bd, setup, sd, sell, exit]) => ({ id: newId(), ticker, shares, buy, stop, target,
       setup, paper: false, buyTime: bd, sell, sellTime: sd, exit, notes: "Added from our chat" }));
   saveTrades(have.concat(add));
@@ -1303,6 +1337,118 @@ renderTrades();
 if (!load("trades")) seedTrades();
 renderPositions();
 if (keysReady()) { refreshPositions(); checkPaper(true); }
+
+// ---------- Quick view: daily returns ----------
+const dollars = v => "$" + (+v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function loadDays() { try { return JSON.parse(load("daily") || "[]"); } catch { return []; } }
+function saveDays(d) { d.sort((a, b) => a.date.localeCompare(b.date)); save("daily", JSON.stringify(d)); renderDaily(); }
+function dayPcts(days) {
+  return days.map((d, i) => d.pct != null && d.pct !== "" ? +d.pct
+    : (i > 0 && days[i - 1].value ? (d.value / days[i - 1].value - 1) * 100 : null));
+}
+function colorPct(el, v) { el.className = v == null ? "" : v >= 0 ? "pos" : "neg"; }
+function renderDaily() {
+  const days = loadDays(), p = dayPcts(days), last = days[days.length - 1], today = et().date;
+  const vals = p.filter(x => x != null);
+  $("qVal").textContent = last ? dollars(last.value) : "—";
+  $("qValSub").textContent = last ? (last.date === today ? "today" : `as of ${last.date.slice(5).replace("-", "/")}`) : "log your first day below";
+  const tp = last && last.date === today ? p[p.length - 1] : null;
+  $("qToday").textContent = tp == null ? "—" : sgn(tp); colorPct($("qToday"), tp);
+  const now = et(), afterClose = isWeekday(now) && mins(now) >= 960;
+  $("qTodaySub").textContent = tp != null ? usd(last.value - (last.value / (1 + tp / 100))) : afterClose ? "log today’s value below" : "log it after the close";
+  if (vals.length) {
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const growth = vals.reduce((a, b) => a * (1 + b / 100), 1);
+    const geo = (Math.pow(growth, 1 / vals.length) - 1) * 100;
+    $("qAvg").textContent = sgn(mean); colorPct($("qAvg"), mean);
+    $("qAvgSub").textContent = `${vals.length} day${vals.length > 1 ? "s" : ""} · compounded ${sgn(geo)}/day`;
+    const tot = (growth - 1) * 100;
+    $("qTot").textContent = sgn(tot); colorPct($("qTot"), tot);
+    const startVal = last.value / growth;
+    $("qTotSub").textContent = `${usd(last.value - startVal)} since ${days[0].date.slice(5).replace("-", "/")}`;
+    const green = vals.filter(v => v > 0).length;
+    $("qWin").textContent = `${green} of ${vals.length}`;
+    $("qWinSub").textContent = `best ${sgn(Math.max(...vals))} · worst ${sgn(Math.min(...vals))}`;
+  } else {
+    ["qAvg", "qTot", "qWin"].forEach(id => { $(id).textContent = "—"; $(id).className = ""; });
+    $("qAvgSub").textContent = "needs one logged day"; $("qTotSub").textContent = ""; $("qWinSub").textContent = "";
+  }
+  if (afterClose && (!last || last.date !== today)) $("dailyLog").open = true;
+  $("dHist").innerHTML = days.length ? `<div class="tablewrap"><table class="cards"><thead><tr><th class="l">Date</th><th>Account value</th><th>Day</th><th></th></tr></thead><tbody>${
+    days.slice().reverse().map((d, j) => { const i = days.length - 1 - j, v = p[i];
+      return `<tr><td class="l">${d.date}</td><td>${dollars(d.value)}</td><td>${v == null ? "—" : `<span class="${v >= 0 ? "pos" : "neg"}">${sgn(v)}</span>`}</td>
+      <td class="acts"><button class="mini quiet" data-act="dayDel" data-date="${d.date}">✕</button></td></tr>`; }).join("")}</tbody></table></div>` : "";
+  const t = $("dHist").querySelector("table"); if (t) labelize(t);
+}
+$("dDate").value = et().date;
+$("dSave").addEventListener("click", () => {
+  const ds = (m, err) => { $("dStatus").textContent = m; $("dStatus").className = err ? "err" : "muted"; };
+  const date = $("dDate").value, value = +$("dVal").value, pctRaw = $("dPct").value.trim();
+  if (!date || !(value > 0)) { ds("Enter the date and your account value.", true); return; }
+  const days = loadDays().filter(d => d.date !== date);
+  days.push({ date, value, pct: pctRaw === "" ? null : +pctRaw });
+  saveDays(days);
+  ds(`Saved ${date}: ${dollars(value)}${pctRaw !== "" ? `, ${sgn(+pctRaw)}` : ""}.`);
+  $("dVal").value = ""; $("dPct").value = ""; $("dDate").value = et().date;
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-act='dayDel']");
+  if (b && confirm(`Remove ${b.dataset.date} from your daily log?`)) saveDays(loadDays().filter(d => d.date !== b.dataset.date));
+});
+if (!load("daily")) save("daily", JSON.stringify([{ date: "2026-10-27", value: 1158.63, pct: 3.92 }]));
+renderDaily();
+setInterval(renderDaily, 300000);
+
+// ---------- Trades and daily values from the Oct 28 order screens ----------
+SEED.push(
+  ["RENT", 150, 2.90, 2.75, 3.34, "2026-10-26", "Momentum + news", "2026-10-26", 2.74, "Hit stop"],
+  ["RENT", 100, 2.845, 2.74, 3.27, "2026-10-26", "Momentum + news", "2026-10-26", 2.74, "Hit stop"],
+  ["SRTM", 250, 0.5408, 0.50, 0.62, "2026-10-26", "News gap (pre-market)", "2026-10-26", 0.5993, "Sold early"],
+  ["SRTM", 250, 0.5976, 0.55, 0.69, "2026-10-26", "News gap (pre-market)", "2026-10-26", 0.5993, "Sold early"],
+  ["ESLA", 150, 1.0388, 1.01, 1.19, "2026-10-26", "Momentum / chase", "2026-10-26", 1.00, "Hit stop"],
+  ["ZURA", 100, 3.6646, 3.57, 4.21, "2026-10-26", "Other", "2026-10-26", 3.565, "Hit stop"],
+  ["GPUS", 500, 0.1885, 0.179, 0.217, "2026-10-26", "Long shot", "2026-10-26", 0.1872, "Sold early"],
+  ["GPUS", 500, 0.1885, 0.179, 0.217, "2026-10-26", "Long shot", "2026-10-26", 0.179, "Hit stop"],
+  ["GPUS", 500, 0.1893, 0.179, 0.218, "2026-10-26", "Long shot", "2026-10-26", 0.179, "Hit stop"],
+  ["LX", 300, 0.64, 0.595, 0.74, "2026-10-26", "Long shot", "2026-10-26", 0.641, "Sold early"],
+  ["ENVX", 100, 2.8185, 2.75, 3.24, "2026-10-23", "Other", "2026-10-26", 2.9362, "Sold early"],
+  ["CIG", 100, 1.8599, 1.67, 2.14, "2026-10-26", "Bounce / dip", "2026-10-27", 1.915, "Sold early"],
+  ["LUCD", 200, 0.5204, 0.49, 0.60, "2026-10-26", "Long shot", "2026-10-27", 0.4881, "Hit stop"],
+  ["IMSR", 100, 3.2654, 3.04, 3.76, "2026-10-27", "News, hasn’t popped", "2026-10-27", 3.185, "Sold early"],
+  ["ADCT", 139, 1.5799, 1.47, 1.82, "2026-10-27", "Other", "2026-10-28", 1.5514, "Sold early"],
+  ["ALLO", 163, 1.3299, 1.27, 1.53, "2026-10-28", "Other", "2026-10-28", 1.27, "Hit stop"]
+);
+(function migrateOct28() {
+  if (load("seed_v") === "2") return;
+  seedTrades();
+  const t = loadTrades();
+  t.forEach(x => {
+    if (x.paper || x.sell != null) return;
+    if (x.ticker === "NVA" && Math.abs(x.stop - 3.11) < 1e-6) x.stop = 3.38;
+    if (x.ticker === "WVE" && Math.abs(x.stop - 3.06) < 1e-6) x.stop = 3.58;
+  });
+  saveTrades(t);
+  const d = loadDays();
+  if (!d.some(x => x.date === "2026-10-28")) { d.push({ date: "2026-10-28", value: 1185.35, pct: 4.34 }); saveDays(d); }
+  save("seed_v", "2");
+})();
+
+// ---------- Older trades from the full order history (Oct 28, 4:08 PM) ----------
+SEED.push(
+  ["BKYI", 63, 3.116, 2.90, 3.58, "2026-10-23", "News gap (pre-market)", "2026-10-23", 3.70, "Sold early"],
+  ["HUMA", 614, 0.4057, 0.38, 0.47, "2026-10-21", "Before the scanner", "2026-10-22", 0.4043, "Sold early"],
+  ["GLND", 72, 3.1557, 2.93, 3.63, "2026-10-21", "Before the scanner", "2026-10-21", 3.1017, "Sold early"],
+  ["GLND", 100, 5.04, 4.69, 5.80, "2026-10-21", "Before the scanner", "2026-10-21", 4.95, "Sold early"]
+);
+(function migrateOlder() {
+  if (load("seed_v") === "3") return;
+  const t = loadTrades();
+  t.forEach(x => { if (x.ticker === "XLAB" && Math.abs(x.buy - 3.40) < 1e-6 && x.shares === 30) { x.buy = 3.3988; x.notes = "Fill from order history"; } });
+  saveTrades(t);
+  seedTrades();
+  save("seed_v", "3");
+})();
+
 </script>
 </body>
 </html>
