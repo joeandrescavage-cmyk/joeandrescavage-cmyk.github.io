@@ -100,12 +100,55 @@
   #rvStatus strong { color: var(--ink); }
   .pos { color: var(--up); font-weight: 600; }
   .neg { color: var(--flag); font-weight: 600; }
+  .muted { color: var(--muted); }
+  #posStatus, #tStatus { font-size: 14px; min-height: 1.5em; margin: 4px 0 10px; }
+  #posStatus.err, #tStatus.err { color: var(--flag); }
+  .panel { margin: 0 0 28px; }
+  .panelhead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+  .panelhead h2, .review h2 { font-size: 20px; margin: 0 0 4px; }
+  #posTotal { font-size: 15px; font-weight: 600; }
+  h3 { font-size: 16px; margin: 22px 0 8px; }
+  h4 { font-size: 14px; margin: 14px 0 6px; color: var(--muted); }
+  .tag { display: inline-block; margin: 0 4px 3px 0; padding: 1px 7px; border-radius: 4px; font-size: 11.5px; font-weight: 600;
+    background: var(--line); color: var(--ink); white-space: nowrap; }
+  .tag.good { background: var(--up-soft); color: var(--up); }
+  .tag.bad { background: var(--flag-soft); color: var(--flag); }
+  .tag.warn { background: var(--line); color: var(--ink); }
+  .adv { font-size: 13px; margin-bottom: 4px; line-height: 1.35; }
+  .adv.good { color: var(--up); font-weight: 600; }
+  .adv.bad { color: var(--flag); font-weight: 600; }
+  .adv.warn { color: var(--ink); font-weight: 600; }
+  button.mini { padding: 5px 10px; font-size: 13px; border-radius: 6px; margin: 0 4px 4px 0; }
+  .acts { white-space: nowrap; }
+  label.chk { flex-direction: row; display: flex; align-items: center; gap: 8px; }
+  tr.sep td { font-size: 12px; font-weight: 700; color: var(--muted); background: var(--paper); }
+  .range select { width: auto; margin: 0 4px; padding: 6px 8px; }
+  table.stats { min-width: 520px; }
+  @media (max-width: 700px) {
+    main { padding: 18px 12px 48px; }
+    h1 { font-size: 22px; }
+    .bar button { flex: 1 1 auto; }
+    table.cards { min-width: 0; }
+    table.cards thead { display: none; }
+    table.cards, table.cards tbody, table.cards tr, table.cards td { display: block; width: 100%; }
+    table.cards tr { border-bottom: 1px solid var(--line); padding: 8px 2px; }
+    table.cards tr:last-child { border-bottom: 0; }
+    table.cards td { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border: 0;
+      padding: 4px 10px; text-align: right; }
+    table.cards td::before { content: attr(data-label); flex: 0 0 38%; text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; }
+    table.cards td[data-label=""]::before, table.cards td.rank::before { content: none; }
+    table.cards td.tk { font-size: 17px; }
+    table.cards td.news, table.cards td.l.news { display: block; max-width: none; text-align: left; }
+    table.cards td.news::before { display: block; margin-bottom: 3px; }
+    table.cards td.gap i { display: none; }
+    table.cards tr.sep td { display: block; }
+  }
 </style>
 </head>
 <body>
 <main>
   <h1>Pre-market scanner</h1>
-  <p class="sub">Two scans for US stocks under $5. <strong>Tomorrow’s watchlist</strong> (run in the evening) finds after-hours movers, fresh news since the close, and strong closers before the morning crowd. <strong>Morning scan</strong> (run 8:00–9:15 AM Eastern) shows which ones are actually gapping with real volume. <strong>Right now</strong> (any time during market hours) rates which stocks are surging at the moment.</p>
+  <p class="sub">Scans for low-priced US stocks (set the price range below). <strong>Tomorrow’s watchlist</strong> (run in the evening) finds after-hours movers, fresh news since the close, and strong closers before the morning crowd. <strong>Morning scan</strong> (run 8:00–9:15 AM Eastern) shows which ones are actually gapping with real volume. <strong>Right now</strong> (any time during market hours) rates which stocks are surging at the moment.</p>
 
   <details class="keys" id="keysBox">
     <summary>Alpaca API keys</summary>
@@ -116,16 +159,33 @@
     <p class="hint">Use your free paper-trading keys. They’re saved only in this browser on this computer.</p>
   </details>
 
+  <section class="panel" id="posSec">
+    <div class="panelhead"><h2>My positions</h2><span id="posTotal"></span></div>
+    <p class="sub">Your open real trades from the trade log, with the latest price, your stop and target, and what your rules say to do next. Outside market hours it shows the after-hours move and any company news since the close.</p>
+    <div class="bar">
+      <button class="quiet" id="posRefresh">Refresh prices</button>
+      <label class="auto"><input type="checkbox" id="posAuto"> Auto-refresh every minute (4 AM–8 PM ET)</label>
+    </div>
+    <div id="posStatus" class="muted"></div>
+    <div class="tablewrap"><div class="empty" id="posEmpty">No open positions. Log a buy in the trade log at the bottom of the page.</div>
+      <table class="cards" id="posTbl" hidden><thead><tr>
+        <th class="l">Ticker</th><th>Shares</th><th>Cost</th><th>Price</th><th>Gain</th><th>Today</th><th>Stop</th><th>Target</th><th class="l">What to do</th><th class="l">News since close</th><th></th>
+      </tr></thead><tbody id="posRows"></tbody></table></div>
+  </section>
+
   <div class="bar">
     <button id="watchBtn">Tomorrow’s watchlist</button>
     <button id="runBtn">Morning scan</button>
     <button id="nowBtn">Right now</button>
     <button class="quiet" id="csvBtn" disabled>Download CSV</button>
-    <label class="auto"><input type="checkbox" id="autoRun"> Run automatically at 8:40 AM ET on weekdays while this tab is open</label>
+    <label class="auto"><input type="checkbox" id="autoRun"> Run automatically at 8:40 AM ET on weekdays while this tab is open (also checks the morning picks at 10:17 and 3:47 and closes paper trades)</label>
+    <label class="auto range">Price range
+      <select id="minPrice"><option value="0.25">$0.25</option><option value="0.5">$0.50</option><option value="1">$1.00</option></select> to
+      <select id="maxPrice"><option value="5">$5</option><option value="7.5">$7.50</option><option value="10">$10</option></select></label>
   </div>
 
   <div id="status">Enter your keys, then run a scan.</div>
-  <div class="tablewrap"><div class="empty" id="empty">No results yet.</div><table id="tbl" hidden>
+  <div class="tablewrap"><div class="empty" id="empty">No results yet.</div><table id="tbl" class="cards" hidden>
     <thead id="head"></thead>
     <tbody id="rows"></tbody>
   </table></div>
@@ -141,21 +201,53 @@
       <label>Sell target %<input type="number" id="rvT" value="15" min="1" max="200" step="1"></label>
       <label>Stop-loss %<input type="number" id="rvS" value="7" min="1" max="90" step="1"></label>
       <button class="quiet" id="rvBtn">Check results</button>
+      <button class="quiet" id="holdBtn">Did they hold?</button>
     </div>
     <div id="rvStatus"></div>
-    <div class="tablewrap" id="rvWrap" hidden><table>
-      <thead><tr>
+    <div class="tablewrap" id="rvWrap" hidden><table class="cards">
+      <thead id="rvHead"><tr>
         <th class="l">Ticker</th><th>Open</th><th>High after open</th><th>Close vs open</th><th class="l">With target and stop</th>
       </tr></thead>
       <tbody id="rvRows"></tbody>
     </table></div>
+  </section>
+
+  <section class="review" id="logSec">
+    <h2>Trade log</h2>
+    <p class="sub">Every trade, real or paper. Paper trades close themselves at their stop, their +15% target, or the 3:30 PM time stop. Tap “+ Paper buy” on any scan result to log one in a tap. Saved in this browser only, so your phone and computer keep separate logs.</p>
+    <div class="rvbar">
+      <label>Ticker<input type="text" id="tTicker" autocomplete="off" spellcheck="false"></label>
+      <label>Shares<input type="number" id="tShares" min="1" step="1"></label>
+      <label>Buy price $<input type="number" id="tBuy" min="0" step="0.0001"></label>
+      <label>Stop $ (blank = −7%)<input type="number" id="tStop" min="0" step="0.0001"></label>
+      <label>Setup<select id="tSetup"></select></label>
+      <label class="auto chk"><input type="checkbox" id="tPaper"> Paper trade</label>
+      <button id="tAdd">Log buy</button>
+    </div>
+    <div id="tStatus" class="muted"></div>
+    <h3>Open trades</h3>
+    <div class="tablewrap"><div class="empty" id="openEmpty">No open trades.</div>
+      <table class="cards" id="openTbl" hidden><thead><tr><th class="l">Ticker</th><th class="l">Type</th><th class="l">Setup</th><th>Bought</th><th>Shares</th><th>Buy</th><th>Stop</th><th>Target</th><th></th></tr></thead>
+      <tbody id="openRows"></tbody></table></div>
+    <h3>Results</h3>
+    <div id="statsBox"></div>
+    <h3>Closed trades</h3>
+    <div class="tablewrap"><div class="empty" id="closedEmpty">No closed trades yet.</div>
+      <table class="cards" id="closedTbl" hidden><thead><tr><th class="l">Ticker</th><th class="l">Type</th><th class="l">Setup</th><th>Bought</th><th>Shares</th><th>Buy</th><th>Sell</th><th>Profit</th><th class="l">Exit</th><th></th></tr></thead>
+      <tbody id="closedRows"></tbody></table></div>
+    <div class="bar">
+      <button class="quiet" id="tCheck">Check paper trades</button>
+      <button class="quiet" id="tExport">Download log (CSV)</button>
+      <button class="quiet" id="tSeed">Add my earlier trades</button>
+    </div>
   </section>
 </main>
 
 <script>
 const DATA = "https://data.alpaca.markets";
 const TRADE = "https://paper-api.alpaca.markets";
-const MAX_PRICE = 5, MIN_PRICE = 0.5, MIN_AVG_VOL = 500000, MIN_PM_VOL = 50000;
+let MAX_PRICE = 5, MIN_PRICE = 0.5;
+const MIN_AVG_VOL = 500000, MIN_PM_VOL = 50000;
 const DEEP_DIVE = 40, SHOW_TOP = 20;
 
 const CATALYSTS = { "fda":3, "approval":3, "approved":3, "phase 3":3, "phase 2":2, "breakthrough":2,
@@ -327,6 +419,7 @@ async function scan() {
     }
     rows.sort((a, b) => b.score - a.score);
     lastResults = rows; lastMode = "premarket";
+    await enrichHistory(rows.slice(0, SHOW_TOP));
     render(rows.slice(0, SHOW_TOP));
     savePicks(et().date, rows.slice(0, SHOW_TOP));
     const done = et();
@@ -352,24 +445,22 @@ const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&
 const MORNING_HEAD = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Prev close</th><th>Gap</th>
   <th>Pre-mkt volume</th><th>% of avg day</th><th class="l">Latest news</th><th>Score</th></tr>`;
 function newsCell(r) {
-  const flag = r.flags.length ? `<span class="flag">Warning: ${esc(r.flags.join(", "))}</span><br>` : "";
+  const tags = newsTags(r) + histTags(r);
   const head = r.headline ? (r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.headline)}</a>` : esc(r.headline)) : "No news in the last 36 hours";
-  return flag + head;
+  return (tags ? `<div>${tags}</div>` : "") + head;
 }
 function render(rows) {
   $("head").innerHTML = MORNING_HEAD;
   const maxGap = Math.max(...rows.map(r => Math.max(r.gap, 0)), 1);
   $("rows").innerHTML = rows.map((r, i) => {
     const w = Math.max(r.gap, 0) / maxGap * 100;
-    const flag = r.flags.length ? `<span class="flag">Warning: ${esc(r.flags.join(", "))}</span><br>` : "";
-    const head = r.headline ? (r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.headline)}</a>` : esc(r.headline)) : "No news in the last 36 hours";
     return `<tr>
       <td class="l rank">${i + 1}</td>
       <td class="l tk"><a href="https://finviz.com/quote.ashx?t=${r.ticker}" target="_blank" rel="noopener">${r.ticker}</a></td>
       <td>${money(r.price)}</td><td>${money(r.prev)}</td>
       <td class="gap"><i style="width:calc(${w}% - 24px)"></i><span>${r.gap >= 0 ? "+" : ""}${r.gap.toFixed(1)}%</span></td>
       <td>${big(r.pmVol)}</td><td>${r.volPct.toFixed(0)}%</td>
-      <td class="l news">${flag}${head}</td>
+      <td class="l news">${newsCell(r)}</td>
       <td class="score">${r.score.toFixed(1)}</td></tr>`;
   }).join("");
   $("tbl").hidden = false; $("empty").hidden = true;
@@ -457,7 +548,7 @@ async function watchlist() {
       const prev = prior[prior.length - 1].c;
       const recent = prior.slice(-20);
       const avg = recent.reduce((a, b) => a + b.v, 0) / recent.length;
-      if (prev >= 0.25 && last.c < 7 && avg >= MIN_AVG_VOL) base[s] = { prev, avg };
+      if (prev >= 0.25 && last.c < MAX_PRICE * 1.4 && avg >= MIN_AVG_VOL) base[s] = { prev, avg };
     }
     const cands = Object.keys(base);
     if (!cands.length) throw new Error("No stocks matched the price and volume filters.");
@@ -509,6 +600,7 @@ async function watchlist() {
     }
     rows.sort((a, b) => b.score - a.score);
     lastResults = rows; lastMode = "watchlist";
+    await enrichHistory(rows.slice(0, SHOW_TOP));
     renderWatch(rows.slice(0, SHOW_TOP));
     status(`Watchlist for the session after ${D}: scanned ${symbols.length.toLocaleString()} stocks in ${Math.round((Date.now() - t0) / 1000)}s, data through ${fmtTime(et(end))} ET. Run the morning scan before the open to see which ones are actually gapping.`);
     $("csvBtn").disabled = false;
@@ -554,7 +646,7 @@ async function nowScan() {
   const t0 = Date.now();
   try {
     const all = await getBase();
-    const base = Object.fromEntries(Object.entries(all).filter(([, b]) => b.prev < 6));
+    const base = Object.fromEntries(Object.entries(all).filter(([, b]) => b.prev < MAX_PRICE * 1.2));
     const cands = Object.keys(base);
     if (!cands.length) throw new Error("No stocks matched the price and volume filters.");
 
@@ -619,6 +711,7 @@ async function nowScan() {
     }
     rows.sort((a, b) => b.score - a.score);
     lastResults = rows; lastMode = "rightnow";
+    await enrichHistory(rows.slice(0, SHOW_TOP));
     renderNow(rows.slice(0, SHOW_TOP));
     status(`Right now, as of ${fmtTime(et())} ET: full-market data through ${fmtTime(et(end))} (15 minutes behind on the free plan), with live prices checked on one exchange. Scanned in ${Math.round((Date.now() - t0) / 1000)}s.`);
     $("csvBtn").disabled = false;
@@ -663,7 +756,7 @@ function renderNow(rows) {
 function savedDates() { try { return JSON.parse(load("pick_dates") || "[]"); } catch { return []; } }
 function savePicks(date, rows) {
   save("picks:" + date, JSON.stringify(rows.map(r => ({ ticker: r.ticker, pmPrice: +r.price.toFixed(4),
-    gap: +r.gap.toFixed(1), score: +r.score.toFixed(1) }))));
+    gap: +r.gap.toFixed(1), score: +r.score.toFixed(1), news: r.headline ? 1 : 0 }))));
   const dates = savedDates();
   if (!dates.includes(date)) { dates.push(date); dates.sort(); save("pick_dates", JSON.stringify(dates)); }
   fillDates();
@@ -712,6 +805,7 @@ async function review() {
       return { ticker: p.ticker, open, highPct: (high / open - 1) * 100, closePct: (last / open - 1) * 100, outcome, result };
     });
 
+    $("rvHead").innerHTML = RV_HEAD;
     $("rvRows").innerHTML = out.map(r => {
       if (r.missing) return `<tr><td class="l tk"><a href="https://finviz.com/quote.ashx?t=${r.ticker}" target="_blank" rel="noopener">${r.ticker}</a></td><td colspan="4" class="l news">No trades found for this day</td></tr>`;
       const res = { target: `Sold at ${pct(T)}`, stop: `Stopped out at ${pct(-S)}`,
@@ -755,6 +849,460 @@ setInterval(() => {
     scan();
   }
 }, 30000);
+</script>
+<script>
+// =====================================================================
+// Added features: price range, news/risk tags, positions, trade log,
+// "did it hold?" checks, and phone-friendly tables.
+// =====================================================================
+const sgn = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+const usd = v => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toFixed(2)}`;
+const fx = v => v == null || isNaN(v) ? "—" : money(+v);
+const keysReady = () => $("keyId").value.trim() && $("secret").value.trim();
+const isWeekday = t => !["Sat", "Sun"].includes(t.wd);
+const mins = t => t.h * 60 + t.min;
+const tickerLink = t => `<a href="https://finviz.com/quote.ashx?t=${esc(t)}" target="_blank" rel="noopener">${esc(t)}</a>`;
+
+// ---------- 1. Price range setting ----------
+function applyRange() {
+  MIN_PRICE = +load("min_price") || 0.5;
+  MAX_PRICE = +load("max_price") || 5;
+  $("minPrice").value = String(MIN_PRICE);
+  $("maxPrice").value = String(MAX_PRICE);
+}
+$("minPrice").addEventListener("change", e => { save("min_price", e.target.value); applyRange(); });
+$("maxPrice").addEventListener("change", e => { save("max_price", e.target.value); applyRange(); });
+applyRange();
+
+// ---------- 2. News and risk tags ----------
+const GOOD_TAGS = [
+  ["Earnings", /earnings|quarter[^.]{0,20}results|financial results|fiscal[^.]{0,20}results|\bq[1-4]\b[^.]{0,15}results|revenue|\beps\b|guidance/i],
+  ["Contract / deal", /contract|award|purchase order|agreement|partnership|collaborat|letter of intent|\bLOI\b/i],
+  ["FDA / trial", /\bfda\b|phase (1|2|3|i{1,3})\b|clinical|\btrial\b|(regulatory|marketing) (approval|clearance)|510\(k\)/i],
+  ["Permit / approval", /approvals? (from|by) the state|permit|final approvals?/i],
+  ["Funding", /funding|non-dilutive|\bgrant\b|refinanc|credit facility/i],
+  ["Buyback", /buyback|repurchase/i],
+  ["M&A", /acquire|acquisition|merger|buyout|to be acquired|takeover/i],
+];
+const BAD_TAGS = [
+  ["Offering", /offering|registered direct|private placement|at-the-market|dilut|warrants?\b/i],
+  ["Reverse split", /reverse (stock )?split|share consolidation/i],
+  ["Listing risk", /delist|deficiency|non-?compliance|minimum bid/i],
+  ["Going concern", /going concern|bankrupt|chapter 11/i],
+  ["Miss", /\bmiss(es|ed)?\b|below estimates/i],
+];
+const FLAG_LABEL = { "offering": "Offering", "registered direct": "Offering", "dilution": "Offering", "warrants": "Offering",
+  "reverse split": "Reverse split", "delist": "Listing risk", "deficiency": "Listing risk", "bankruptcy": "Going concern",
+  "chapter 11": "Going concern", "going concern": "Going concern", "misses": "Miss" };
+function smallDeal(h) {
+  const m = h.match(/\$\s?([\d.]+)\s?(k|thousand|m|mm|million)\b/i);
+  if (!m) return false;
+  const v = parseFloat(m[1]) * (/^(k|thousand)$/i.test(m[2]) ? 1e3 : 1e6);
+  return v > 0 && v < 5e6;
+}
+function newsTags(r) {
+  const h = r.headline || "";
+  const good = h ? GOOD_TAGS.filter(([, re]) => re.test(h)).map(([t]) => t) : [];
+  const bad = new Set(h ? BAD_TAGS.filter(([, re]) => re.test(h)).map(([t]) => t) : []);
+  (r.flags || []).forEach(f => bad.add(FLAG_LABEL[f] || f));
+  if (h && smallDeal(h)) bad.add("Small deal");
+  if (/(suspend|terminat|withdr|cancel)\w*[^.]{0,40}offering|offering[^.]{0,25}(suspend|terminat|withdr|cancel)/i.test(h)) {
+    bad.delete("Offering"); good.push("Offering pulled");
+  }
+  return good.map(t => `<span class="tag good">${t}</span>`).join("") +
+         [...bad].map(t => `<span class="tag bad">${t}</span>`).join("");
+}
+async function enrichHistory(rows) {
+  if (!rows.length) return;
+  try {
+    const midnight = etToday(0, 0), today = et().date;
+    const bars = await getBars(rows.map(r => r.ticker), { timeframe: "1Day", adjustment: "split",
+      start: new Date(midnight.getTime() - 370 * 86400000).toISOString(),
+      end: new Date(Date.now() - 16 * 60000).toISOString() }, "Checking each stock’s price history");
+    for (const r of rows) {
+      const b = (bars[r.ticker] || []).filter(x => et(new Date(x.t)).date < today);
+      if (b.length < 5) continue;
+      const hi = Math.max(...b.map(x => x.h));
+      let streak = 0;
+      for (let i = b.length - 1; i > 0 && b[i].c > b[i - 1].c; i--) streak++;
+      const recent = b.slice(-127);
+      let spikes = 0;
+      for (let i = 1; i < recent.length; i++) if (recent[i].h / recent[i - 1].c >= 1.5) spikes++;
+      r.hist = { hi52: hi, below: (r.price / hi - 1) * 100, streak, spikes };
+    }
+  } catch { /* history is optional */ }
+}
+function histTags(r) {
+  const h = r.hist;
+  if (!h) return "";
+  const t = [];
+  if (h.below <= -70) t.push(`<span class="tag bad" title="52-week high ${money(h.hi52)}">${Math.round(-h.below)}% below 52-wk high</span>`);
+  if (h.spikes >= 2) t.push(`<span class="tag bad">Spiked 50%+ ${h.spikes}× in 6 months</span>`);
+  if (h.streak >= 3) t.push(`<span class="tag warn">Up ${h.streak} days in a row</span>`);
+  return t.join("");
+}
+
+// ---------- 6. Phone-friendly tables ----------
+function labelize(table) {
+  const ths = [...table.querySelectorAll("thead th")].map(t => t.textContent.trim());
+  table.querySelectorAll("tbody tr").forEach(tr => [...tr.children].forEach((td, i) => {
+    if (!td.hasAttribute("data-label")) td.setAttribute("data-label", td.colSpan > 1 ? "" : (ths[i] || ""));
+  }));
+}
+function watchTable(tbodyId, extra) {
+  const tb = $(tbodyId);
+  new MutationObserver(() => { if (extra) extra(); labelize(tb.closest("table")); }).observe(tb, { childList: true });
+}
+
+// ---------- 4. Trade log (real and paper) ----------
+const SETUPS = ["News gap (pre-market)", "No-news gap", "News, hasn’t popped", "Momentum + news", "Momentum / chase",
+  "Breakout", "Bounce / dip", "After-hours mover", "Long shot", "Other"];
+$("tSetup").innerHTML = SETUPS.map(s => `<option>${s}</option>`).join("");
+function loadTrades() { try { return JSON.parse(load("trades") || "[]"); } catch { return []; } }
+function saveTrades(t) { save("trades", JSON.stringify(t)); renderTrades(); renderPositions(); }
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const plOf = t => t.sell == null ? null : (t.sell - t.buy) * t.shares;
+const plPct = t => t.sell == null ? null : (t.sell / t.buy - 1) * 100;
+function timeBucket(iso) {
+  if (!iso || iso.length <= 10) return "Time not logged";
+  const m = mins(et(new Date(iso)));
+  return m < 570 ? "Pre-market" : m < 690 ? "Morning (9:30–11:30)" : m < 840 ? "Midday (11:30–2:00)" : m < 960 ? "Afternoon (2:00–4:00)" : "After hours";
+}
+function logBuy({ ticker, shares, buy, stop, setup, paper, at }) {
+  const trades = loadTrades();
+  trades.push({ id: newId(), ticker: ticker.toUpperCase(), shares: +shares, buy: +buy,
+    stop: stop ? +stop : +(buy * 0.93).toFixed(4), target: +(buy * 1.15).toFixed(4),
+    setup, paper: !!paper, buyTime: at || new Date().toISOString(), sell: null, sellTime: null, exit: null, notes: "" });
+  saveTrades(trades);
+}
+$("tAdd").addEventListener("click", () => {
+  const ts = (m, err) => { $("tStatus").textContent = m; $("tStatus").className = err ? "err" : "muted"; };
+  const ticker = $("tTicker").value.trim(), shares = +$("tShares").value, buy = +$("tBuy").value;
+  if (!/^[A-Za-z.]{1,6}$/.test(ticker) || !(shares > 0) || !(buy > 0)) { ts("Enter a ticker, shares, and buy price.", true); return; }
+  logBuy({ ticker, shares, buy, stop: +$("tStop").value || null, setup: $("tSetup").value, paper: $("tPaper").checked });
+  ts(`Logged ${$("tPaper").checked ? "paper" : "real"} buy: ${shares} ${ticker.toUpperCase()} at ${money(buy)}.`);
+  ["tTicker", "tShares", "tBuy", "tStop"].forEach(id => $(id).value = "");
+});
+function closeTrade(id, price, exit) {
+  const trades = loadTrades(), t = trades.find(x => x.id === id);
+  if (!t) return;
+  t.sell = +price; t.sellTime = new Date().toISOString(); t.exit = exit;
+  saveTrades(trades);
+}
+function editTrade(id) {
+  const trades = loadTrades(), t = trades.find(x => x.id === id);
+  if (!t) return;
+  const s = prompt(`Stop for ${t.ticker} (now ${money(t.stop)})`, t.stop);
+  if (s === null) return;
+  const g = prompt(`Target for ${t.ticker} (now ${money(t.target)})`, t.target);
+  if (+s > 0) t.stop = +s;
+  if (g !== null && +g > 0) t.target = +g;
+  saveTrades(trades);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-act]");
+  if (!b) return;
+  const { act, id } = b.dataset;
+  if (act === "close") {
+    const t = loadTrades().find(x => x.id === id);
+    const live = posCache[t?.ticker]?.price;
+    const p = prompt(`Sell price for ${t.ticker}`, live ? live.toFixed(4) : t.buy);
+    if (p === null || !(+p > 0)) return;
+    const r = prompt("Why did you sell? Type: target, stop, time, or early", "target");
+    if (r === null) return;
+    const exit = { target: "Hit target", stop: "Hit stop", time: "Time stop", early: "Sold early" }[r.trim().toLowerCase()] || r.trim() || "Sold";
+    closeTrade(id, +p, exit);
+  } else if (act === "edit") editTrade(id);
+  else if (act === "del") { if (confirm("Delete this trade from the log?")) saveTrades(loadTrades().filter(x => x.id !== id)); }
+  else if (act === "paper") {
+    const r = lastResults[+b.dataset.i];
+    if (!r) return;
+    const setup = lastMode === "premarket" ? (r.headline ? "News gap (pre-market)" : "No-news gap")
+      : lastMode === "watchlist" ? "After-hours mover" : (r.headline && r.newsPts > 0 ? "Momentum + news" : "Momentum / chase");
+    const shares = Math.max(1, Math.floor(150 / r.price));
+    logBuy({ ticker: r.ticker, shares, buy: r.price, setup, paper: true });
+    b.textContent = "Logged"; b.disabled = true;
+  }
+});
+function fmtWhen(iso) {
+  if (!iso) return "—";
+  if (iso.length <= 10) return iso;
+  const t = et(new Date(iso));
+  return `${t.m}/${t.day} ${fmtTime(t)}`;
+}
+function renderTrades() {
+  const trades = loadTrades();
+  const open = trades.filter(t => t.sell == null), closed = trades.filter(t => t.sell != null);
+  $("openTbl").hidden = !open.length; $("openEmpty").hidden = !!open.length;
+  $("openRows").innerHTML = open.map(t => `<tr>
+    <td class="l tk">${tickerLink(t.ticker)}</td><td class="l">${t.paper ? '<span class="tag warn">Paper</span>' : '<span class="tag good">Real</span>'}</td>
+    <td class="l">${esc(t.setup || "")}</td><td>${fmtWhen(t.buyTime)}</td><td>${t.shares}</td><td>${fx(t.buy)}</td>
+    <td>${fx(t.stop)}</td><td>${fx(t.target)}</td>
+    <td class="acts"><button class="mini" data-act="close" data-id="${t.id}">Sell</button><button class="mini quiet" data-act="edit" data-id="${t.id}">Edit</button><button class="mini quiet" data-act="del" data-id="${t.id}">✕</button></td></tr>`).join("");
+  closed.sort((a, b) => (b.sellTime || "").localeCompare(a.sellTime || ""));
+  $("closedTbl").hidden = !closed.length; $("closedEmpty").hidden = !!closed.length;
+  $("closedRows").innerHTML = closed.map(t => { const pl = plOf(t), p = plPct(t); return `<tr>
+    <td class="l tk">${tickerLink(t.ticker)}</td><td class="l">${t.paper ? '<span class="tag warn">Paper</span>' : '<span class="tag good">Real</span>'}</td>
+    <td class="l">${esc(t.setup || "")}</td><td>${fmtWhen(t.buyTime)}</td><td>${t.shares}</td><td>${fx(t.buy)}</td><td>${fx(t.sell)}</td>
+    <td class="${pl >= 0 ? "pos" : "neg"}">${usd(pl)}<br><small>${sgn(p)}</small></td><td class="l">${esc(t.exit || "")}</td>
+    <td class="acts"><button class="mini quiet" data-act="del" data-id="${t.id}">✕</button></td></tr>`; }).join("");
+  renderStats(closed);
+}
+function statRow(label, list) {
+  const n = list.length, wins = list.filter(t => plOf(t) > 0).length;
+  const total = list.reduce((a, t) => a + plOf(t), 0), avgPct = list.reduce((a, t) => a + plPct(t), 0) / n;
+  return `<tr><td class="l">${esc(label)}</td><td>${n}</td><td>${Math.round(wins / n * 100)}%</td>
+    <td class="${total >= 0 ? "pos" : "neg"}">${usd(total)}</td><td class="${avgPct >= 0 ? "pos" : "neg"}">${sgn(avgPct)}</td></tr>`;
+}
+function groupRows(list, keyFn) {
+  const g = {};
+  list.forEach(t => (g[keyFn(t)] ||= []).push(t));
+  return Object.entries(g).sort((a, b) => b[1].length - a[1].length).map(([k, v]) => statRow(k, v)).join("");
+}
+function renderStats(closed) {
+  if (!closed.length) { $("statsBox").innerHTML = `<p class="muted">Results appear here once you’ve closed a trade.</p>`; return; }
+  const block = (title, list) => !list.length ? "" : `<h4>${title}</h4><div class="tablewrap"><table class="cards stats">
+    <thead><tr><th class="l">Group</th><th>Trades</th><th>Win rate</th><th>Total P/L</th><th>Avg per trade</th></tr></thead><tbody>
+    ${statRow("All", list)}
+    <tr class="sep"><td class="l" colspan="5">By setup</td></tr>${groupRows(list, t => t.setup || "Other")}
+    <tr class="sep"><td class="l" colspan="5">By time of day</td></tr>${groupRows(list, t => timeBucket(t.buyTime))}
+    <tr class="sep"><td class="l" colspan="5">By how it ended</td></tr>${groupRows(list, t => t.exit || "Sold")}
+    </tbody></table></div>`;
+  $("statsBox").innerHTML = block("Real money", closed.filter(t => !t.paper)) + block("Paper", closed.filter(t => t.paper));
+  document.querySelectorAll("#statsBox table").forEach(labelize);
+}
+$("tExport").addEventListener("click", () => {
+  const cols = ["ticker", "paper", "setup", "buyTime", "shares", "buy", "stop", "target", "sellTime", "sell", "exit"];
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [cols.join(",") + ",profit"].concat(loadTrades().map(t => cols.map(c => q(t[c])).join(",") + "," + (plOf(t) ?? "")));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  a.download = `trade-log-${et().date}.csv`; a.click();
+});
+// Trades from our earlier conversation (fills taken from your Schwab order screens)
+const SEED = [
+  ["TRON", 177, 1.4049, 1.45, 1.62, "2026-10-22", "Momentum / chase", "2026-10-23", 1.45, "Hit stop"],
+  ["BATL", 143, 0.6946, 0.70, 0.80, "2026-10-22", "Other", "2026-10-22", 0.7992, "Hit target"],
+  ["XLAB", 30, 3.40, 3.16, 3.91, "2026-10-22", "Momentum + news", "2026-10-22", 4.395, "Hit target"],
+  ["NCPL", 60, 2.485, 2.40, 2.86, "2026-10-22", "Momentum / chase", "2026-10-22", 2.40, "Hit stop"],
+  ["BKYI", 100, 3.56, 3.31, 4.09, "2026-10-23", "News gap (pre-market)", "2026-10-23", 3.70, "Sold early"],
+  ["BKYI", 140, 3.5199, 3.45, 4.05, "2026-10-23", "News gap (pre-market)", "2026-10-23", 3.4514, "Hit stop"],
+  ["CLRO", 100, 2.80, 2.60, 3.08, "2026-10-23", "Momentum / chase", "2026-10-23", 3.105, "Sold early"],
+  ["GPUS", 1000, 0.1687, 0.184, 0.194, "2026-10-23", "News gap (pre-market)", "2026-10-23", 0.184, "Hit stop"],
+  ["CJMB", 500, 0.634, 0.60, 0.73, "2026-10-23", "Breakout", "2026-10-23", 0.5957, "Hit stop"],
+  ["UWMC", 150, 1.2529, 1.22, 1.44, "2026-10-23", "Momentum + news", "2026-10-23", 1.221, "Hit stop"],
+  ["NVA", 150, 3.1114, 3.11, 3.58, "2026-10-27", "News, hasn’t popped", null, null, null],
+  ["WVE", 126, 3.2951, 3.06, 3.79, "2026-10-27", "News, hasn’t popped", null, null, null],
+];
+function seedTrades() {
+  const have = loadTrades();
+  const add = SEED.filter(s => !have.some(t => t.ticker === s[0] && t.buyTime?.slice(0, 10) === s[5] && Math.abs(t.buy - s[2]) < 1e-6))
+    .map(([ticker, shares, buy, stop, target, bd, setup, sd, sell, exit]) => ({ id: newId(), ticker, shares, buy, stop, target,
+      setup, paper: false, buyTime: bd, sell, sellTime: sd, exit, notes: "Added from our chat" }));
+  saveTrades(have.concat(add));
+  return add.length;
+}
+$("tSeed").addEventListener("click", () => {
+  const n = seedTrades();
+  $("tStatus").textContent = n ? `Added ${n} earlier trades. Check NVA and WVE: edit the stops to the ones you actually set, or sell them if you already have.` : "Your earlier trades are already in the log.";
+  $("tStatus").className = "muted";
+});
+
+// Paper trades close themselves at the stop, the target, or 3:30 PM
+async function checkPaper(quiet) {
+  const trades = loadTrades(), open = trades.filter(t => t.paper && t.sell == null);
+  const ts = m => { if (!quiet) { $("tStatus").textContent = m; $("tStatus").className = "muted"; } };
+  if (!open.length) { ts("No open paper trades."); return; }
+  if (!keysReady()) { ts("Enter your Alpaca keys to check paper trades."); return; }
+  const end = new Date(Date.now() - 16 * 60000);
+  const start = new Date(Math.min(...open.map(t => new Date(t.buyTime).getTime())));
+  let bars;
+  try { bars = await getBars([...new Set(open.map(t => t.ticker))], { timeframe: "5Min", start: start.toISOString(), end: end.toISOString() }, "Checking paper trades", ts); }
+  catch (e) { ts(e.message); return; }
+  let closed = 0;
+  for (const t of open) {
+    const bt = new Date(t.buyTime), bd = et(bt);
+    // time stop: 3:30 PM on the buy day if bought before then on a weekday, otherwise the next weekday
+    let d = new Date(bt);
+    if (!(isWeekday(bd) && mins(bd) < 930)) { do { d = new Date(d.getTime() + 86400000); } while (!isWeekday(et(d))); }
+    const day = et(d).date, deadline = etOn(day, 15, 30);
+    const rb = (bars[t.ticker] || []).filter(x => {
+      const xt = new Date(x.t), xe = et(xt), m = mins(xe);
+      return xt >= bt && m >= 570 && m < 960 && xt < new Date(deadline.getTime() + 5 * 60000);
+    });
+    let res = null;
+    for (const x of rb) {
+      if (x.l <= t.stop) { res = [t.stop, "Hit stop", x.t]; break; }
+      if (x.h >= t.target) { res = [t.target, "Hit target", x.t]; break; }
+      if (new Date(x.t) >= deadline) { res = [x.o, "Time stop", x.t]; break; }
+    }
+    if (res) { t.sell = res[0]; t.exit = res[1]; t.sellTime = new Date(res[2]).toISOString(); closed++; }
+  }
+  if (closed) saveTrades(trades);
+  ts(closed ? `Closed ${closed} paper trade${closed > 1 ? "s" : ""}.` : "No paper trade has hit its stop, target, or 3:30 time stop yet.");
+}
+$("tCheck").addEventListener("click", () => checkPaper(false));
+
+// ---------- 1 & 5. My positions, with after-hours and news ----------
+const posCache = {};
+function advice(t, price) {
+  const gain = (price / t.buy - 1) * 100, out = [];
+  const now = et(), m = mins(now), inSession = isWeekday(now) && m >= 570 && m < 960;
+  if (!t.stop) out.push(["warn", `Set a stop: about ${money(t.buy * 0.93)} (−7%)`]);
+  else if (t.stop >= price) out.push(["bad", `Your ${money(t.stop)} stop is at or above the price. It will sell ${inSession ? "now" : "at the open"} unless you lower it.`]);
+  else if ((price / t.stop - 1) * 100 < 2.5) out.push(["warn", `Stop is within 2.5% of the price. Normal wiggles may trigger it.`]);
+  if (price >= t.target) out.push(["good", `At your ${money(t.target)} target. Take the win.`]);
+  else if ((t.target / price - 1) * 100 <= 3) out.push(["good", `Within ${((t.target / price - 1) * 100).toFixed(1)}% of target. Have a limit sell ready.`]);
+  if (gain >= 10 && t.stop && t.stop < t.buy * 1.04) out.push(["good", `Up ${gain.toFixed(1)}%. Consider a stop near ${money(price * 0.95)} to lock in about +${(price * 0.95 / t.buy * 100 - 100).toFixed(0)}%.`]);
+  else if (gain >= 5 && t.stop && t.stop < t.buy * 0.995) out.push(["good", `Up ${gain.toFixed(1)}%. Raise the stop to breakeven, ${money(t.buy)}.`]);
+  if (isWeekday(now) && m >= 930 && m < 960) out.push(["warn", "3:30 rule: sell unless it’s at the day’s high on strong volume."]);
+  if (!inSession) out.push(["", "Stops only work 9:30–4:00. After hours, only limit orders fill."]);
+  if (!out.length || out.every(o => o[0] === "")) out.unshift(["", "On plan. Let the stop and target work."]);
+  return out.map(([k, s]) => `<div class="adv ${k}">${s}</div>`).join("");
+}
+function renderPositions() {
+  const pos = loadTrades().filter(t => !t.paper && t.sell == null);
+  $("posTbl").hidden = !pos.length; $("posEmpty").hidden = !!pos.length;
+  const now = et(), m = mins(now), outside = !(isWeekday(now) && m >= 570 && m < 960);
+  $("posRows").innerHTML = pos.map(t => {
+    const q = posCache[t.ticker] || {}, price = q.price;
+    const gain = price ? (price - t.buy) * t.shares : null, gp = price ? (price / t.buy - 1) * 100 : null;
+    const day = price && q.prevClose ? (outside && q.lastClose ? q.lastClose / q.prevClose - 1 : price / q.prevClose - 1) * 100 : null;
+    const ah = outside && price && q.lastClose ? (price / q.lastClose - 1) * 100 : null;
+    const news = q.news || [];
+    return `<tr>
+      <td class="l tk">${tickerLink(t.ticker)}</td><td>${t.shares}</td><td>${fx(t.buy)}</td>
+      <td>${price ? money(price) : "—"}${q.asOf ? `<br><small class="muted">${q.asOf}</small>` : ""}</td>
+      <td class="${gain >= 0 ? "pos" : "neg"}">${gain == null ? "—" : `${usd(gain)}<br><small>${sgn(gp)}</small>`}</td>
+      <td>${day == null ? "—" : `<span class="${day >= 0 ? "pos" : "neg"}">${sgn(day)}</span>`}${ah == null ? "" : `<br><small class="${ah >= 0 ? "pos" : "neg"}">${sgn(ah)} since close</small>`}</td>
+      <td>${fx(t.stop)}${price && t.stop ? `<br><small class="muted">${sgn((t.stop / price - 1) * 100)} away</small>` : ""}</td>
+      <td>${fx(t.target)}${price ? `<br><small class="muted">${sgn((t.target / price - 1) * 100)} away</small>` : ""}</td>
+      <td class="l">${price ? advice(t, price) : '<div class="adv">Tap Refresh for prices.</div>'}</td>
+      <td class="l news">${news.length ? news.slice(0, 2).map(n => `<div>${newsTags({ headline: n.headline })} <a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.headline)}</a> <small>${fmtWhen(n.at.toISOString())}</small></div>`).join("") : "No company news since the last close"}</td>
+      <td class="acts"><button class="mini" data-act="close" data-id="${t.id}">Sell</button><button class="mini quiet" data-act="edit" data-id="${t.id}">Edit stop</button></td></tr>`;
+  }).join("");
+  const tot = pos.reduce((a, t) => a + (posCache[t.ticker]?.price ? (posCache[t.ticker].price - t.buy) * t.shares : 0), 0);
+  $("posTotal").innerHTML = pos.length && pos.some(t => posCache[t.ticker]?.price) ? `Unrealized: <span class="${tot >= 0 ? "pos" : "neg"}">${usd(tot)}</span>` : "";
+}
+async function refreshPositions() {
+  const ps = (m, err) => { $("posStatus").textContent = m; $("posStatus").className = err ? "err" : "muted"; };
+  const pos = loadTrades().filter(t => !t.paper && t.sell == null);
+  if (!pos.length) { renderPositions(); return; }
+  if (!keysReady()) { ps("Enter your Alpaca keys to load prices.", true); renderPositions(); return; }
+  const syms = [...new Set(pos.map(t => t.ticker))];
+  $("posRefresh").disabled = true;
+  try {
+    const end = new Date(Date.now() - 16 * 60000);
+    const bars = await getBars(syms, { timeframe: "5Min", start: new Date(Date.now() - 7 * 86400000).toISOString(), end: end.toISOString() }, "Loading prices", ps);
+    let lt = {};
+    try { lt = (await api(`${DATA}/v2/stocks/trades/latest?feed=iex&symbols=${syms.join(",")}`)).trades || {}; } catch {}
+    let lastSessionClose = null;
+    for (const s of syms) {
+      const b = bars[s] || [], byDay = {};
+      for (const x of b) {
+        const xe = et(new Date(x.t)), mm = mins(xe);
+        if (mm >= 570 && mm < 960) (byDay[xe.date] ||= []).push(x);
+      }
+      const days = Object.keys(byDay).sort(), now = et(), inSession = isWeekday(now) && mins(now) >= 570 && mins(now) < 960;
+      const closeOf = d => d && byDay[d] ? byDay[d][byDay[d].length - 1].c : null;
+      let lastClose = null, prevClose = null;
+      if (inSession && days[days.length - 1] === now.date) prevClose = closeOf(days[days.length - 2]);
+      else { lastClose = closeOf(days[days.length - 1]); prevClose = closeOf(days[days.length - 2]); }
+      const lastBar = b[b.length - 1];
+      let price = null, asOfT = null;
+      if (lastBar) { price = lastBar.c; asOfT = new Date(new Date(lastBar.t).getTime() + 5 * 60000); }
+      const tr = lt[s];
+      if (tr && (!asOfT || new Date(tr.t) > asOfT)) { price = tr.p; asOfT = new Date(tr.t); }
+      posCache[s] = { ...(posCache[s] || {}), price, prevClose, lastClose, asOf: asOfT ? `as of ${fmtTime(et(asOfT))}` : "" };
+      if (days.length) lastSessionClose = etOn(days[days.length - 1], 16, 0);
+    }
+    try {
+      const since = lastSessionClose && lastSessionClose < new Date() ? lastSessionClose : new Date(Date.now() - 24 * 3600000);
+      const news = await getNews(syms, since);
+      for (const s of syms) posCache[s].news = news[s] || [];
+    } catch {}
+    ps(`Updated ${fmtTime(et())} ET.`);
+  } catch (e) {
+    ps(e instanceof TypeError ? "Couldn’t reach Alpaca. Check your connection." : e.message, true);
+  } finally {
+    $("posRefresh").disabled = false;
+    renderPositions();
+  }
+}
+$("posRefresh").addEventListener("click", refreshPositions);
+$("posAuto").checked = load("pos_auto") === "1";
+$("posAuto").addEventListener("change", e => save("pos_auto", e.target.checked ? "1" : "0"));
+setInterval(() => {
+  const t = et(), m = mins(t);
+  if ($("posAuto").checked && document.visibilityState === "visible" && isWeekday(t) && m >= 240 && m < 1200) refreshPositions();
+}, 60000);
+
+// ---------- 3. Did the morning picks hold? ----------
+const RV_HEAD = `<tr><th class="l">Ticker</th><th>Open</th><th>High after open</th><th>Close vs open</th><th class="l">With target and stop</th></tr>`;
+async function holdCheck(dateArg, quiet) {
+  const rs = (m, err = false) => { $("rvStatus").innerHTML = m; $("rvStatus").className = err ? "err" : ""; };
+  const date = dateArg || $("rvDate").value;
+  if (!date) { rs("Run a Morning scan first. Its picks are saved here.", true); return; }
+  if (!keysReady()) { rs("Enter both Alpaca keys first.", true); return; }
+  let picks;
+  try { picks = JSON.parse(load("picks:" + date)); } catch { picks = null; }
+  if (!picks?.length) { rs("No saved picks for that day.", true); return; }
+  picks = picks.slice(0, clamp(Math.round(+$("rvN").value || 5), 1, picks.length));
+  const openT = etOn(date, 9, 30), closeT = etOn(date, 16, 0), limit = new Date(Date.now() - 16 * 60000);
+  if (limit <= new Date(openT.getTime() + 10 * 60000)) { rs("Check back after about 9:46. Full-market data runs 15 minutes behind.", true); return; }
+  const end = limit < closeT ? limit : closeT;
+  $("holdBtn").disabled = true;
+  try {
+    const bars = await getBars(picks.map(p => p.ticker), { timeframe: "5Min", start: openT.toISOString(), end: end.toISOString() }, "Checking the picks", rs);
+    const at = (b, h, m) => { const t = etOn(date, h, m); if (t > end) return null; const x = b.filter(z => new Date(z.t).getTime() + 300000 <= t.getTime()).pop(); return x ? x.c : null; };
+    const out = picks.map(p => {
+      const b = (bars[p.ticker] || []).filter(x => { const t = new Date(x.t); return t >= openT && t < closeT; });
+      if (!b.length) return { p, missing: true };
+      const hi = Math.max(...b.map(x => x.h)), last = b[b.length - 1].c, base = p.pmPrice || b[0].o;
+      const st = last >= hi * 0.98 && last >= base ? "New high" : last >= base * 0.97 ? "Held" : "Faded";
+      return { p, open: b[0].o, c945: at(b, 9, 45), c1000: at(b, 10, 0), c1530: at(b, 15, 30), last, hi, base, st };
+    });
+    $("rvHead").innerHTML = `<tr><th class="l">Ticker</th><th>Pre-mkt</th><th>Open</th><th>9:45</th><th>10:00</th><th>3:30</th><th>Latest</th><th>High</th><th class="l">Result</th></tr>`;
+    const c = (v, base) => v == null ? "—" : `${money(v)}<br><small class="${v >= base ? "pos" : "neg"}">${sgn((v / base - 1) * 100)}</small>`;
+    $("rvRows").innerHTML = out.map(r => r.missing ? `<tr><td class="l tk">${tickerLink(r.p.ticker)}</td><td colspan="8" class="l news">No trades found</td></tr>` :
+      `<tr><td class="l tk">${tickerLink(r.p.ticker)}${r.p.news ? ' <span class="tag good">News</span>' : ' <span class="tag">No news</span>'}</td>
+       <td>${money(r.base)}</td><td>${c(r.open, r.base)}</td><td>${c(r.c945, r.base)}</td><td>${c(r.c1000, r.base)}</td><td>${c(r.c1530, r.base)}</td>
+       <td>${c(r.last, r.base)}</td><td>${c(r.hi, r.base)}</td>
+       <td class="l"><span class="tag ${r.st === "Faded" ? "bad" : "good"}">${r.st}</span></td></tr>`).join("");
+    $("rvWrap").hidden = false;
+    const got = out.filter(r => !r.missing), held = got.filter(r => r.st !== "Faded");
+    const nw = got.filter(r => r.p.news), nn = got.filter(r => !r.p.news);
+    const rate = l => l.length ? `${l.filter(r => r.st !== "Faded").length} of ${l.length}` : "none";
+    rs(`<strong>${held.length} of ${got.length}</strong> held or made new highs vs. their pre-market price${end < closeT ? " so far" : ""}. ` +
+       `With news: ${rate(nw)} held. Without news: ${rate(nn)} held.`);
+    if (!dateArg) return;
+  } catch (e) {
+    rs(e instanceof TypeError ? "Couldn’t reach Alpaca. Check your connection." : e.message, true);
+  } finally { $("holdBtn").disabled = false; }
+}
+$("holdBtn").addEventListener("click", () => holdCheck(null));
+setInterval(() => {
+  const t = et(), m = mins(t);
+  if (!$("autoRun").checked || !isWeekday(t)) return;
+  for (const [mm, key] of [[617, "hold_1000"], [947, "hold_1530"]]) {
+    if (m >= mm && m < mm + 10 && load(key) !== t.date && load("picks:" + t.date)) { save(key, t.date); holdCheck(t.date, true); }
+  }
+  if (m >= 570 && m < 960 && m % 5 === 0) checkPaper(true);
+}, 60000);
+
+// ---------- Wire up tables ----------
+watchTable("rows", () => {
+  const head = $("head").querySelector("tr");
+  if (head && !head.querySelector(".pbh")) head.insertAdjacentHTML("beforeend", '<th class="pbh">Paper</th>');
+  [...$("rows").children].forEach((tr, i) => {
+    if (!tr.querySelector(".pbc")) tr.insertAdjacentHTML("beforeend", `<td class="pbc"><button class="mini quiet" data-act="paper" data-i="${i}">+ Paper buy</button></td>`);
+  });
+});
+watchTable("rvRows"); watchTable("posRows"); watchTable("openRows"); watchTable("closedRows");
+renderTrades();
+if (!load("trades")) seedTrades();
+renderPositions();
+if (keysReady()) { refreshPositions(); checkPaper(true); }
 </script>
 </body>
 </html>
