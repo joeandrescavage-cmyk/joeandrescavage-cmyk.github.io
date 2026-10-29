@@ -1124,8 +1124,8 @@ const SEED = [
   ["GPUS", 1000, 0.1687, 0.184, 0.194, "2026-10-23", "News gap (pre-market)", "2026-10-23", 0.184, "Hit stop"],
   ["CJMB", 500, 0.634, 0.60, 0.73, "2026-10-23", "Breakout", "2026-10-23", 0.5957, "Hit stop"],
   ["UWMC", 150, 1.2529, 1.22, 1.44, "2026-10-23", "Momentum + news", "2026-10-23", 1.221, "Hit stop"],
-  ["NVA", 150, 3.1114, 3.11, 3.58, "2026-10-27", "News, hasn’t popped", null, null, null],
-  ["WVE", 126, 3.2951, 3.06, 3.79, "2026-10-27", "News, hasn’t popped", null, null, null],
+  ["NVA", 150, 3.1114, 3.38, 3.58, "2026-10-27", "News, hasn’t popped", "2026-10-28", 3.4155, "Time stop"],
+  ["WVE", 126, 3.2951, 3.58, 3.79, "2026-10-27", "News, hasn’t popped", "2026-10-28", 3.6165, "Time stop"],
 ];
 function seedTrades() {
   const have = loadTrades();
@@ -1376,7 +1376,7 @@ function renderDaily() {
   if (afterClose && (!last || last.date !== today)) $("dailyLog").open = true;
   $("dHist").innerHTML = days.length ? `<div class="tablewrap"><table class="cards"><thead><tr><th class="l">Date</th><th>Account value</th><th>Day</th><th></th></tr></thead><tbody>${
     days.slice().reverse().map((d, j) => { const i = days.length - 1 - j, v = p[i];
-      return `<tr><td class="l">${d.date}</td><td>${dollars(d.value)}</td><td>${v == null ? "—" : `<span class="${v >= 0 ? "pos" : "neg"}">${sgn(v)}</span>`}</td>
+      return `<tr><td class="l">${d.date}${d.note ? ` <small class="muted">${esc(d.note)}</small>` : ""}</td><td>${dollars(d.value)}</td><td>${v == null ? "—" : `<span class="${v >= 0 ? "pos" : "neg"}">${sgn(v)}</span>`}</td>
       <td class="acts"><button class="mini quiet" data-act="dayDel" data-date="${d.date}">✕</button></td></tr>`; }).join("")}</tbody></table></div>` : "";
   const t = $("dHist").querySelector("table"); if (t) labelize(t);
 }
@@ -1447,6 +1447,34 @@ SEED.push(
   saveTrades(t);
   seedTrades();
   save("seed_v", "3");
+})();
+
+// ---------- Oct 28 evening: NVA and WVE sold after hours; account values corrected ----------
+(function migrateClose() {
+  if (load("seed_close") === "1") return;
+  const sells = { NVA: 3.4155, WVE: 3.6165 };
+  const t = loadTrades();
+  t.forEach(x => {
+    if (!x.paper && x.sell == null && sells[x.ticker]) {
+      x.sell = sells[x.ticker]; x.sellTime = "2026-10-28T20:30:00.000Z"; x.exit = "Time stop";
+      x.notes = "Sold after hours (Day + Ext limit)";
+    }
+  });
+  const seen = new Set();
+  const clean = t.filter(x => {
+    const k = [x.ticker, x.shares, (+x.buy).toFixed(4), (x.buyTime || "").slice(0, 10), x.sell == null ? "open" : (+x.sell).toFixed(4), x.paper ? "P" : "R"].join("|");
+    if (seen.has(k)) return false; seen.add(k); return true;
+  });
+  saveTrades(clean);
+  const fix = ["2026-10-21", "2026-10-22", "2026-10-26", "2026-10-27", "2026-10-28"];
+  const d = loadDays().filter(x => !fix.includes(x.date));
+  d.push({ date: "2026-10-21", value: 1020.80, pct: null, note: "starting value" },
+         { date: "2026-10-22", value: 1093.38, pct: 7.11 },
+         { date: "2026-10-26", value: 1114.90, pct: 1.97, note: "10/23 + 10/26 combined" },
+         { date: "2026-10-27", value: 1136.04, pct: 1.90 },
+         { date: "2026-10-28", value: 1177.20, pct: 3.62 });
+  saveDays(d);
+  save("seed_close", "1");
 })();
 
 </script>
