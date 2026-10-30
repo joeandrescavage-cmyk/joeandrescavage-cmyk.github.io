@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pre-market scanner</title>
+<meta name="theme-color" content="#120428">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+<script>try { document.documentElement.dataset.theme = localStorage.getItem("theme") || "80s"; } catch (e) { document.documentElement.dataset.theme = "80s"; }</script>
 <style>
   :root {
     color-scheme: light;
@@ -101,6 +106,17 @@
   .pos { color: var(--up); font-weight: 600; }
   .neg { color: var(--flag); font-weight: 600; }
   .muted { color: var(--muted); }
+  #linkOut { width: 100%; font-size: 12px; line-height: 1.35; word-break: break-all; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--paper); color: var(--ink); resize: none; }
+  #linkStatus { font-size: 14px; min-height: 1.4em; margin: 6px 0; }
+  #linkStatus.err { color: var(--flag); }
+  .odds { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 96px; }
+  .oddsbar { width: 92px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .oddsbar i { display: block; height: 100%; background: var(--muted); }
+  .odds.hi .oddsbar i { background: var(--up); }
+  .odds.mid .oddsbar i { background: #d29922; }
+  .odds.lo .oddsbar i { background: var(--flag); }
+  .odds b { font-size: 15px; line-height: 1.1; }
+  .odds small { font-size: 11px; color: var(--muted); white-space: nowrap; }
   .quick { margin: 0 0 18px; }
   .qcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
   .qc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
@@ -156,11 +172,93 @@
     table.cards td.gap i { display: none; }
     table.cards tr.sep td { display: block; }
   }
+
+  /* ===== 80s theme (toggle: Classic colors) ===== */
+  html[data-theme="80s"] {
+    color-scheme: dark;
+    --paper: #120428;
+    --panel: #1E0A40;
+    --ink: #F7F0FF;
+    --muted: #BBA8E8;
+    --line: #4A2790;
+    --up: #00F5D4;
+    --up-soft: #063F46;
+    --flag: #FF5CA8;
+    --flag-soft: #4D1238;
+    --accent: #FF2E97;
+    --accent-ink: #150433;
+    --cyan: #4DE1FF;
+    --gold: #FFD319;
+  }
+  html[data-theme="80s"] body {
+    background:
+      radial-gradient(ellipse 120% 55% at 50% -8%, rgba(255,138,61,.38), rgba(255,46,151,.22) 38%, rgba(18,4,40,0) 68%),
+      linear-gradient(180deg, #120428 0%, #1A0638 55%, #260A4D 100%);
+    background-attachment: fixed;
+  }
+  html[data-theme="80s"] body::after {
+    content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 30vh; pointer-events: none; z-index: 0; opacity: .45;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,245,212,.22) 0 1px, transparent 1px 64px),
+      repeating-linear-gradient(0deg, rgba(0,245,212,.22) 0 1px, transparent 1px 36px);
+    -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  }
+  html[data-theme="80s"] main { position: relative; z-index: 1; }
+  .titlebar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; }
+  #themeBtn { padding: 6px 12px; font-size: 12px; }
+  html[data-theme="80s"] h1 {
+    font-family: "Audiowide", "Orbitron", system-ui, sans-serif; font-weight: 400;
+    text-transform: uppercase; letter-spacing: .06em; font-size: 28px;
+    background: linear-gradient(90deg, #FF2E97 0%, #FF8A3D 42%, #FFD319 68%, #00F5D4 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255,46,151,.45));
+  }
+  html[data-theme="80s"] h2 {
+    font-family: "Audiowide", "Orbitron", system-ui, sans-serif; font-weight: 400;
+    color: var(--cyan); text-transform: uppercase; letter-spacing: .08em; font-size: 18px;
+    text-shadow: 0 0 10px rgba(77,225,255,.55);
+  }
+  html[data-theme="80s"] h3 { color: var(--gold); text-transform: uppercase; letter-spacing: .08em; font-size: 14px; }
+  html[data-theme="80s"] h4 { color: var(--cyan); }
+  html[data-theme="80s"] a { color: var(--cyan); }
+  html[data-theme="80s"] .news a { color: var(--cyan); }
+  html[data-theme="80s"] .tk a { color: var(--gold); text-shadow: 0 0 8px rgba(255,211,25,.35); }
+  html[data-theme="80s"] .tablewrap,
+  html[data-theme="80s"] details.keys,
+  html[data-theme="80s"] details.qlog,
+  html[data-theme="80s"] .qc {
+    box-shadow: 0 0 0 1px rgba(255,46,151,.12), 0 0 22px rgba(255,46,151,.14), inset 0 0 18px rgba(77,225,255,.04);
+  }
+  html[data-theme="80s"] .qc.big { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(255,46,151,.5), 0 0 26px rgba(255,46,151,.45); }
+  html[data-theme="80s"] .qc > span { color: var(--cyan); letter-spacing: .1em; }
+  html[data-theme="80s"] .qc b { font-family: "Orbitron", "Audiowide", system-ui, sans-serif; font-weight: 700; }
+  html[data-theme="80s"] button {
+    background: linear-gradient(90deg, #FF2E97, #FF8A3D); color: #150433; font-weight: 800;
+    letter-spacing: .04em; text-transform: uppercase; font-size: 13px; box-shadow: 0 0 14px rgba(255,46,151,.55);
+  }
+  html[data-theme="80s"] button:hover:not(:disabled) { filter: brightness(1.12); box-shadow: 0 0 20px rgba(255,138,61,.7); }
+  html[data-theme="80s"] button.quiet {
+    background: transparent; color: var(--cyan); border: 1px solid var(--cyan); box-shadow: 0 0 10px rgba(77,225,255,.25);
+  }
+  html[data-theme="80s"] th { color: var(--cyan); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; background: #190837; }
+  html[data-theme="80s"] tbody tr:hover td { background: rgba(255,46,151,.07); }
+  html[data-theme="80s"] .tag { background: #2E1566; color: var(--ink); border: 1px solid #4A2790; }
+  html[data-theme="80s"] .tag.good { background: var(--up-soft); color: var(--up); border-color: rgba(0,245,212,.35); }
+  html[data-theme="80s"] .tag.bad { background: var(--flag-soft); color: var(--flag); border-color: rgba(255,92,168,.35); }
+  html[data-theme="80s"] .odds.mid .oddsbar i { background: var(--gold); }
+  html[data-theme="80s"] .odds.hi .oddsbar i { box-shadow: 0 0 8px var(--up); }
+  html[data-theme="80s"] .odds.lo .oddsbar i { box-shadow: 0 0 8px var(--flag); }
+  html[data-theme="80s"] input[type=text], html[data-theme="80s"] input[type=password],
+  html[data-theme="80s"] input[type=number], html[data-theme="80s"] input[type=date],
+  html[data-theme="80s"] select, html[data-theme="80s"] textarea { border-color: #5B31A8; }
+  html[data-theme="80s"] .review { border-top: 1px solid var(--line); }
+  html[data-theme="80s"] ::selection { background: #FF2E97; color: #150433; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Pre-market scanner</h1>
+  <div class="titlebar"><h1>Pre-market scanner</h1><button class="quiet" id="themeBtn" type="button">Classic colors</button></div>
   <p class="sub">Scans for low-priced US stocks (set the price range below). <strong>Tomorrow’s watchlist</strong> (run in the evening) finds after-hours movers, fresh news since the close, and strong closers before the morning crowd. <strong>Morning scan</strong> (run 8:00–9:15 AM Eastern) shows which ones are actually gapping with real volume. <strong>Right now</strong> (any time during market hours) rates which stocks are surging at the moment.</p>
 
   <section class="quick" id="dailySec">
@@ -189,7 +287,14 @@
       <label>API key ID<input type="text" id="keyId" autocomplete="off" spellcheck="false"></label>
       <label>Secret key<input type="password" id="secret" autocomplete="off" spellcheck="false"></label>
     </div>
-    <p class="hint">Use your free paper-trading keys. They’re saved only in this browser on this computer.</p>
+    <p class="hint">Use your free paper-trading keys. They’re saved only in this browser on this device.</p>
+    <div class="bar"><button class="quiet" id="mkLink" type="button">Make a setup link for my phone</button></div>
+    <div id="linkBox" hidden>
+      <p class="hint">Copy this link and text or email it to yourself, then open it on your phone. Your keys, trade log, and daily returns load automatically, so there’s nothing to retype. Anyone with the link can use your paper keys, so delete the message once you’ve opened it.</p>
+      <textarea id="linkOut" readonly rows="4" spellcheck="false"></textarea>
+      <div class="bar"><button class="quiet" id="copyLink" type="button">Copy link</button></div>
+      <div id="linkStatus" class="muted"></div>
+    </div>
   </details>
 
   <section class="panel" id="posSec">
@@ -223,7 +328,7 @@
     <tbody id="rows"></tbody>
   </table></div>
 
-  <p class="foot">Pre-market volume and price come from consolidated market data delayed 15 minutes (the free plan’s limit), refreshed with the latest IEX trade where one exists. A high score means unusual pre-market interest, not a prediction. Stocks that gap up often fade after the open, especially when a stock offering is announced. Treat this as a shortlist to research.</p>
+  <p class="foot">Pre-market volume and price come from consolidated market data delayed 15 minutes (the free plan’s limit), refreshed with the latest IEX trade where one exists. A high score means unusual pre-market interest, not a prediction. Stocks that gap up often fade after the open, especially when a stock offering is announced. Treat this as a shortlist to research. <strong>Odds up</strong> is a historical base rate: the share of past stocks with a similar gap (or, in the evening list, a similar up day) that finished above their open, from the last ~6 months of low-priced stocks and nudged by that stock’s own record. The small line shows how often those cases touched +15% and −7% at some point. It isn’t a prediction.</p>
 
   <section class="review">
     <h2>How past picks did</h2>
@@ -453,6 +558,7 @@ async function scan() {
     rows.sort((a, b) => b.score - a.score);
     lastResults = rows; lastMode = "premarket";
     await enrichHistory(rows.slice(0, SHOW_TOP));
+    try { attachOdds(rows, "gap", await getOdds(cands)); } catch { /* odds are optional */ }
     render(rows.slice(0, SHOW_TOP));
     savePicks(et().date, rows.slice(0, SHOW_TOP));
     const done = et();
@@ -476,7 +582,7 @@ const big = v => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? Math.round(v
 const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 const MORNING_HEAD = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Prev close</th><th>Gap</th>
-  <th>Pre-mkt volume</th><th>% of avg day</th><th class="l">Latest news</th><th>Score</th></tr>`;
+  <th>Pre-mkt volume</th><th>% of avg day</th><th>Odds up</th><th class="l">Latest news</th><th>Score</th></tr>`;
 function newsCell(r) {
   const tags = newsTags(r) + histTags(r);
   const head = r.headline ? (r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.headline)}</a>` : esc(r.headline)) : "No news in the last 36 hours";
@@ -493,20 +599,33 @@ function render(rows) {
       <td>${money(r.price)}</td><td>${money(r.prev)}</td>
       <td class="gap"><i style="width:calc(${w}% - 24px)"></i><span>${r.gap >= 0 ? "+" : ""}${r.gap.toFixed(1)}%</span></td>
       <td>${big(r.pmVol)}</td><td>${r.volPct.toFixed(0)}%</td>
+      <td>${oddsCell(r)}</td>
       <td class="l news">${newsCell(r)}</td>
       <td class="score">${r.score.toFixed(1)}</td></tr>`;
   }).join("");
   $("tbl").hidden = false; $("empty").hidden = true;
 }
 
+function scanCsv(rows) {
+  const flat = rows.map(r => {
+    const { hist, flags, url, odds, ...rest } = r;
+    return { ...rest,
+      oddsUpPct: odds ? +odds.p.toFixed(1) : "",
+      oddsSample: odds ? odds.n : "",
+      below52wkPct: hist ? +hist.below.toFixed(1) : "",
+      upDaysInARow: hist ? hist.streak : "",
+      spikes50pctIn6mo: hist ? hist.spikes : "",
+      flags: (flags || []).join("; ") };
+  });
+  const cols = [...new Set(flat.flatMap(r => Object.keys(r)))];
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return [cols.join(",")].concat(flat.map(r => cols.map(c =>
+    typeof r[c] === "number" ? +r[c].toFixed(4) : q(r[c])).join(","))).join("\n");
+}
 function downloadCsv() {
   if (!lastResults.length) return;
-  const cols = Object.keys(lastResults[0]).filter(k => !["flags", "url"].includes(k));
-  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const lines = [cols.join(",")].concat(lastResults.map(r => cols.map(c =>
-    typeof r[c] === "number" ? +r[c].toFixed(4) : q(r[c])).join(",")));
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  a.href = URL.createObjectURL(new Blob([scanCsv(lastResults)], { type: "text/csv" }));
   a.download = `${lastMode}-${et().date}.csv`;
   a.click();
 }
@@ -634,6 +753,7 @@ async function watchlist() {
     rows.sort((a, b) => b.score - a.score);
     lastResults = rows; lastMode = "watchlist";
     await enrichHistory(rows.slice(0, SHOW_TOP));
+    try { attachOdds(rows, "next", await getOdds(cands)); } catch { /* odds are optional */ }
     renderWatch(rows.slice(0, SHOW_TOP));
     status(`Watchlist for the session after ${D}: scanned ${symbols.length.toLocaleString()} stocks in ${Math.round((Date.now() - t0) / 1000)}s, data through ${fmtTime(et(end))} ET. Run the morning scan before the open to see which ones are actually gapping.`);
     $("csvBtn").disabled = false;
@@ -646,7 +766,7 @@ async function watchlist() {
 
 function renderWatch(rows) {
   $("head").innerHTML = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Last price</th><th>Today</th>
-    <th>After hours</th><th>Volume vs avg</th><th>Closed near high</th><th class="l">Latest news</th><th>Score</th></tr>`;
+    <th>After hours</th><th>Volume vs avg</th><th>Closed near high</th><th>Odds up</th><th class="l">Latest news</th><th>Score</th></tr>`;
   const signed = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
   $("rows").innerHTML = rows.map((r, i) => `<tr>
       <td class="l rank">${i + 1}</td>
@@ -655,6 +775,7 @@ function renderWatch(rows) {
       <td class="${r.dayChg >= 0 ? "pos" : "neg"}">${signed(r.dayChg)}</td>
       <td class="${r.ahChg >= 0 ? "pos" : "neg"}">${signed(r.ahChg)}<br><span class="news">${big(r.ahVol)} shares</span></td>
       <td>${r.volX.toFixed(1)}×</td><td>${r.nearHigh.toFixed(0)}%</td>
+      <td>${oddsCell(r)}</td>
       <td class="l news">${r.afterClose ? '<span class="flag" style="background:var(--up-soft);color:var(--up)">After close</span><br>' : ""}${newsCell(r)}</td>
       <td class="score">${r.score.toFixed(1)}</td></tr>`).join("");
   $("tbl").hidden = false; $("empty").hidden = true;
@@ -945,6 +1066,80 @@ function newsTags(r) {
   return good.map(t => `<span class="tag good">${t}</span>`).join("") +
          [...bad].map(t => `<span class="tag bad">${t}</span>`).join("");
 }
+// ---------- Historical odds: base rates from past gaps ----------
+const ODDS_K = 8;
+const BUCKET_LABEL = ["3–8%", "8–15%", "15–30%", "30%+"];
+const bucketOf = g => g >= 30 ? 3 : g >= 15 ? 2 : g >= 8 ? 1 : g >= 3 ? 0 : -1;
+function calcOdds(daily) {
+  const mk = () => Array.from({ length: 4 }, () => ({ n: 0, up: 0, h15: 0, d7: 0 }));
+  const gap = mk(), next = mk(), own = {};
+  const tally = (e, d) => { e.n++; if (d.c > d.o) e.up++; if (d.h >= d.o * 1.15) e.h15++; if (d.l <= d.o * 0.93) e.d7++; };
+  for (const [s, b] of Object.entries(daily)) {
+    if (b.length < 10) continue;
+    const o = own[s] = { g: { n: 0, up: 0 }, x: { n: 0, up: 0 } };
+    for (let i = 1; i < b.length; i++) {
+      const pc = b[i - 1].c;
+      if (!(pc >= 0.25) || !(b[i].o > 0)) continue;
+      const g = (b[i].o / pc - 1) * 100;
+      if (g >= 3 && g <= 150) {
+        tally(gap[bucketOf(g)], b[i]);
+        if (g >= 5) { o.g.n++; if (b[i].c > b[i].o) o.g.up++; }
+      }
+      if (i + 1 < b.length && b[i + 1].o > 0) {
+        const ch = (b[i].c / pc - 1) * 100;
+        if (ch >= 3 && ch <= 150) {
+          tally(next[bucketOf(ch)], b[i + 1]);
+          if (ch >= 5) { o.x.n++; if (b[i + 1].c > b[i + 1].o) o.x.up++; }
+        }
+      }
+    }
+  }
+  return { gap, next, own };
+}
+async function getOdds(symbols) {
+  const key = "odds:" + et().date;
+  try { const c = JSON.parse(load(key) || "null"); if (c && c.gap && c.next) return c; } catch {}
+  const midnight = etToday(0, 0);
+  const daily = await getBars(symbols, { timeframe: "1Day", adjustment: "split",
+    start: new Date(midnight.getTime() - 130 * 86400000).toISOString(),
+    end: new Date(midnight.getTime() - 60000).toISOString() }, "Building the history odds (first scan of the day only)");
+  const t = calcOdds(daily);
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("odds:") && k !== key) localStorage.removeItem(k);
+    }
+  } catch {}
+  save(key, JSON.stringify(t));
+  return t;
+}
+function attachOdds(rows, kind, t) {
+  for (const r of rows) {
+    r.odds = null;
+    const chg = kind === "gap" ? r.gap : r.dayChg;
+    const k = bucketOf(chg);
+    if (!t || k < 0) continue;
+    const e = (kind === "gap" ? t.gap : t.next)[k];
+    if (!e || e.n < 30) continue;
+    const base = e.up / e.n;
+    const own = ((t.own || {})[r.ticker] || {})[kind === "gap" ? "g" : "x"] || { n: 0, up: 0 };
+    const p = (ODDS_K * base + own.up) / (ODDS_K + own.n);
+    r.odds = { p: p * 100, n: e.n, base: base * 100, h15: e.h15 / e.n * 100, d7: e.d7 / e.n * 100,
+      ownN: own.n, ownUp: own.up, bucket: BUCKET_LABEL[k], kind };
+  }
+}
+function oddsCell(r) {
+  const o = r.odds;
+  if (!o) return `<span class="muted" title="Needs a gain of +3% or more and enough past examples.">—</span>`;
+  const cls = o.p >= 55 ? "hi" : o.p >= 40 ? "mid" : "lo";
+  const when = o.kind === "gap" ? `a ${o.bucket} gap up at the open` : `a ${o.bucket} up day`;
+  const what = o.kind === "gap" ? "finished the day above the open" : "finished the next day above its open";
+  const tip = `Of ${o.n} past cases (low-priced stocks, last ~6 months) with ${when}, ${o.base.toFixed(0)}% ${what}. ` +
+    `This stock’s own record: ${o.ownUp} of ${o.ownN}. Blended estimate. It’s a base rate, not a prediction.`;
+  return `<div class="odds ${cls}" title="${esc(tip)}"><div class="oddsbar"><i style="width:${o.p.toFixed(0)}%"></i></div>` +
+    `<b>${o.p.toFixed(0)}%</b><small>+15%: ${o.h15.toFixed(0)}% · −7%: ${o.d7.toFixed(0)}%</small></div>`;
+}
+
 async function enrichHistory(rows) {
   if (!rows.length) return;
   try {
@@ -1475,6 +1670,74 @@ SEED.push(
          { date: "2026-10-28", value: 1177.20, pct: 3.62 });
   saveDays(d);
   save("seed_close", "1");
+})();
+
+// ---------- Move your keys and logs to another device ----------
+const SETUP_KEYS = ["apca_key", "apca_secret", "trades", "daily", "min_price", "max_price", "seed_v", "seed_close"];
+const b64u = bytes => { let t = ""; bytes.forEach(b => { t += String.fromCharCode(b); }); return btoa(t).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const unb64u = t => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+async function packSetup() {
+  const data = {};
+  SETUP_KEYS.forEach(k => { const v = load(k); if (v) data[k] = v; });
+  const raw = new TextEncoder().encode(JSON.stringify(data));
+  if (typeof CompressionStream === "function") {
+    const buf = await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
+    return "g." + b64u(new Uint8Array(buf));
+  }
+  return "p." + b64u(raw);
+}
+async function unpackSetup(txt) {
+  const body = unb64u(txt.slice(2));
+  let raw = body;
+  if (txt.slice(0, 2) === "g.") raw = new Uint8Array(await new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+  return JSON.parse(new TextDecoder().decode(raw));
+}
+const ls = (m, err) => { $("linkStatus").textContent = m; $("linkStatus").className = err ? "err" : "muted"; };
+$("mkLink").addEventListener("click", async () => {
+  $("linkBox").hidden = false;
+  if (!keysReady()) { $("linkOut").value = ""; ls("Enter both Alpaca keys above first, then tap this again.", true); return; }
+  save("apca_key", $("keyId").value.trim()); save("apca_secret", $("secret").value.trim());
+  try {
+    $("linkOut").value = location.origin + location.pathname + "#setup=" + await packSetup();
+    ls("Ready. Tap Copy link.");
+  } catch (e) { ls("Couldn’t make the link: " + e.message, true); }
+});
+$("copyLink").addEventListener("click", async () => {
+  const el = $("linkOut");
+  if (!el.value) { ls("Make the link first.", true); return; }
+  try { await navigator.clipboard.writeText(el.value); ls("Copied. Paste it into a text or email to yourself."); }
+  catch { el.focus(); el.select(); try { document.execCommand("copy"); ls("Copied. Paste it into a text or email to yourself."); } catch { ls("Press and hold the link, then choose Copy.", true); } }
+});
+(async function applySetup() {
+  const m = location.hash.match(/^#setup=([gp]\.[A-Za-z0-9_-]+)$/);
+  if (!m) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  try {
+    const data = await unpackSetup(m[1]);
+    if (!data.apca_key || !data.apca_secret) throw new Error("no keys in link");
+    const have = load("apca_key");
+    if (have && have !== data.apca_key && !confirm("This device already has different keys. Replace them, and the trade log, with the ones in this link?")) return;
+    SETUP_KEYS.forEach(k => { if (typeof data[k] === "string") save(k, data[k]); });
+    location.reload();
+  } catch (e) {
+    alert("That setup link didn’t work. Make a new one on your computer and try again.");
+  }
+})();
+
+// ---------- Theme: 80s or classic ----------
+(function themeToggle() {
+  const btn = document.getElementById("themeBtn");
+  const apply = t => {
+    document.documentElement.dataset.theme = t;
+    btn.textContent = t === "80s" ? "Classic colors" : "80s mode";
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.content = t === "80s" ? "#120428" : "#F5F7FA";
+  };
+  apply(document.documentElement.dataset.theme === "classic" ? "classic" : "80s");
+  btn.addEventListener("click", () => {
+    const t = document.documentElement.dataset.theme === "80s" ? "classic" : "80s";
+    save("theme", t); apply(t);
+  });
 })();
 
 </script>
