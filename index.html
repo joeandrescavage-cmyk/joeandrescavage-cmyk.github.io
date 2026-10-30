@@ -328,7 +328,7 @@
     <tbody id="rows"></tbody>
   </table></div>
 
-  <p class="foot">Pre-market volume and price come from consolidated market data delayed 15 minutes (the free plan’s limit), refreshed with the latest IEX trade where one exists. A high score means unusual pre-market interest, not a prediction. Stocks that gap up often fade after the open, especially when a stock offering is announced. Treat this as a shortlist to research. <strong>Odds up</strong> is a historical base rate: the share of past stocks with a similar gap (or, in the evening list, a similar up day) that finished above their open, from the last ~6 months of low-priced stocks and nudged by that stock’s own record. The small line shows how often those cases touched +15% and −7% at some point. It isn’t a prediction.</p>
+  <p class="foot">Pre-market volume and price come from consolidated market data delayed 15 minutes (the free plan’s limit), refreshed with the latest IEX trade where one exists. A high score means unusual pre-market interest, not a prediction. Stocks that gap up often fade after the open, especially when a stock offering is announced. Treat this as a shortlist to research. <strong>Odds up</strong> is a historical base rate: the share of past stocks with a similar gap (or, in the evening list, a similar up day) that finished above their open, from the last ~6 months of low-priced stocks and nudged by that stock’s own record. The small line shows how often those cases touched +15% and −7% at some point. It isn’t a prediction. In <strong>Right now</strong> it uses the stock’s gap at today’s open and shows where the price is versus that open.</p>
 
   <section class="review">
     <h2>How past picks did</h2>
@@ -826,6 +826,7 @@ async function nowScan() {
       const adj = rb.length > 1 ? (rv - top) * mins / Math.max(1, mins - 1) : 0;
       rows.push({ ticker: s, price: last, dataPrice: last,
         dayChg: (last / base[s].prev - 1) * 100,
+        gap: (bars[0].o / base[s].prev - 1) * 100, sinceOpen: (last / bars[0].o - 1) * 100,
         surge: adj / (perMin * mins),
         busy: rb.filter(b => b.v >= 2 * perMin).length,
         move15: rb.length ? (rb[rb.length - 1].c / rb[0].o - 1) * 100 : 0,
@@ -866,6 +867,7 @@ async function nowScan() {
     rows.sort((a, b) => b.score - a.score);
     lastResults = rows; lastMode = "rightnow";
     await enrichHistory(rows.slice(0, SHOW_TOP));
+    try { attachOdds(rows, "gap", await getOdds(cands)); } catch { /* odds are optional */ }
     renderNow(rows.slice(0, SHOW_TOP));
     status(`Right now, as of ${fmtTime(et())} ET: full-market data through ${fmtTime(et(end))} (15 minutes behind on the free plan), with live prices checked on one exchange. Scanned in ${Math.round((Date.now() - t0) / 1000)}s.`);
     $("csvBtn").disabled = false;
@@ -889,7 +891,7 @@ function nowScore(r) {
 
 function renderNow(rows) {
   $("head").innerHTML = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Today</th>
-    <th>Volume, last 15 min</th><th>Move, last 15 min</th><th>From day’s high</th><th>vs. VWAP</th><th>Since data</th><th class="l">Latest news</th><th>Rating</th></tr>`;
+    <th>Volume, last 15 min</th><th>Move, last 15 min</th><th>From day’s high</th><th>vs. VWAP</th><th>Since data</th><th>Odds up</th><th class="l">Latest news</th><th>Rating</th></tr>`;
   const signed = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
   $("rows").innerHTML = rows.map((r, i) => `<tr>
       <td class="l rank">${i + 1}</td>
@@ -901,6 +903,7 @@ function renderNow(rows) {
       <td>${r.nearHigh >= 99.95 ? "At high" : signed(r.nearHigh - 100)}</td>
       <td class="${r.vsVwap >= 0 ? "pos" : "neg"}">${signed(r.vsVwap)}</td>
       <td>${r.liveMove === null ? "—" : `<span class="${r.liveMove >= 0 ? "pos" : "neg"}">${signed(r.liveMove)}</span>`}</td>
+      <td>${oddsCell(r)}</td>
       <td class="l news">${r.freshNews ? '<span class="flag" style="background:var(--up-soft);color:var(--up)">Last 2 hours</span><br>' : ""}${newsCell(r)}</td>
       <td class="score">${Math.round(r.score)}</td></tr>`).join("");
   $("tbl").hidden = false; $("empty").hidden = true;
@@ -1137,7 +1140,8 @@ function oddsCell(r) {
   const tip = `Of ${o.n} past cases (low-priced stocks, last ~6 months) with ${when}, ${o.base.toFixed(0)}% ${what}. ` +
     `This stock’s own record: ${o.ownUp} of ${o.ownN}. Blended estimate. It’s a base rate, not a prediction.`;
   return `<div class="odds ${cls}" title="${esc(tip)}"><div class="oddsbar"><i style="width:${o.p.toFixed(0)}%"></i></div>` +
-    `<b>${o.p.toFixed(0)}%</b><small>+15%: ${o.h15.toFixed(0)}% · −7%: ${o.d7.toFixed(0)}%</small></div>`;
+    `<b>${o.p.toFixed(0)}%</b><small>+15%: ${o.h15.toFixed(0)}% · −7%: ${o.d7.toFixed(0)}%</small>` +
+    (typeof r.sinceOpen === "number" ? `<small>now ${r.sinceOpen >= 0 ? "+" : "−"}${Math.abs(r.sinceOpen).toFixed(1)}% vs open</small>` : "") + `</div>`;
 }
 
 async function enrichHistory(rows) {
