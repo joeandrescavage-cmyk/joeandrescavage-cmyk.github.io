@@ -254,12 +254,100 @@
   html[data-theme="80s"] select, html[data-theme="80s"] textarea { border-color: #5B31A8; }
   html[data-theme="80s"] .review { border-top: 1px solid var(--line); }
   html[data-theme="80s"] ::selection { background: #FF2E97; color: #150433; }
+
+  /* ===== Dashboard layout and novice tools ===== */
+  main { max-width: 1240px; }
+  .appbar { position: sticky; top: 8px; z-index: 30; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px 14px;
+    margin: 0 0 16px; padding: 10px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.16); }
+  .appbar h1 { margin: 0; font-size: 22px; line-height: 1.15; }
+  .appbar .tagline { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .mkt { display: flex; align-items: center; gap: 10px; }
+  .clock { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .pill { display: inline-block; padding: 3px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .03em; background: var(--line); color: var(--ink); white-space: nowrap; }
+  .pill.open, .pill.ok { background: var(--up-soft); color: var(--up); }
+  .pill.pre, .pill.wait { background: rgba(210,153,34,.2); color: #c98f12; }
+  .pill.after { background: rgba(130,110,230,.2); }
+  .pill.err { background: var(--flag-soft); color: var(--flag); }
+  .hintbar { grid-column: 1 / -1; font-size: 13.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 2px; }
+  .tools { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 14px; margin: 0 0 18px; align-items: start; }
+  .tools .tall { grid-row: span 2; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .card h2 { font-size: 16px; margin: 0; }
+  .cardhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .hint2 { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; line-height: 1.4; }
+  .frm { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; margin-bottom: 10px; }
+  .frm label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; }
+  .stats3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  .stat span { font-size: 11px; color: var(--muted); display: block; text-transform: uppercase; letter-spacing: .04em; }
+  .stat b { font-size: 16px; }
+  .warn { font-size: 13px; margin: 3px 0; padding-left: 16px; position: relative; line-height: 1.35; }
+  .warn::before { content: "!"; position: absolute; left: 0; font-weight: 800; color: var(--flag); }
+  .warn.soft::before { content: "i"; color: var(--muted); }
+  .lwwrap { overflow-x: auto; }
+  table.lw { width: 100%; min-width: 440px; border-collapse: collapse; font-size: 14px; }
+  table.lw th, table.lw td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  table.lw th:first-child, table.lw td:first-child { text-align: left; }
+  table.lw td small { display: block; color: var(--muted); font-size: 11px; }
+  table.lw tr.hot td { background: var(--flag-soft); }
+  .alerts .al { border: 1px solid var(--flag); background: var(--flag-soft); color: var(--flag); border-radius: 8px; padding: 6px 10px; margin: 4px 0; font-weight: 600; font-size: 13.5px; }
+  .alerts .al.good { border-color: var(--up); background: var(--up-soft); color: var(--up); }
+  .meter { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin: 6px 0; }
+  .meter i { display: block; height: 100%; background: var(--up); }
+  .meter.mid i { background: #d29922; }
+  .meter.lo i { background: var(--flag); }
+  .pretrade label { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 5px 0; }
+  .pretrade .go { margin-top: 8px; font-weight: 700; }
+  .chk { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 104px; }
+  .chkbar { width: 96px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .chkbar i { display: block; height: 100%; background: var(--muted); }
+  .chk.hi .chkbar i { background: var(--up); }
+  .chk.mid .chkbar i { background: #d29922; }
+  .chk.lo .chkbar i { background: var(--flag); }
+  .chk b { font-size: 15px; line-height: 1.1; }
+  .chk small { font-size: 11px; color: var(--muted); }
+  td.chkc { white-space: nowrap; }
+  td.chkc .mini { margin: 4px 4px 0 0; }
+  .modal { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.62); display: flex; align-items: flex-start; justify-content: center; padding: 18px 10px; overflow-y: auto; }
+  .modal[hidden] { display: none; }
+  .modal .box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; width: 100%; max-width: 540px; box-shadow: 0 12px 48px rgba(0,0,0,.45); }
+  ul.checklist { list-style: none; margin: 4px 0 12px; padding: 0; }
+  ul.checklist li { font-size: 13.5px; padding: 4px 0 4px 22px; position: relative; border-bottom: 1px solid var(--line); }
+  ul.checklist li b { position: absolute; left: 2px; }
+  ul.checklist li.ok b { color: var(--up); }
+  ul.checklist li.no b { color: var(--flag); }
+  ul.checklist li small { display: block; color: var(--muted); font-size: 12px; }
+  details.help summary { cursor: pointer; font-weight: 700; font-size: 15px; }
+  details.help h3 { margin: 14px 0 4px; }
+  details.help p, details.help li { font-size: 13.5px; line-height: 1.5; }
+  details.help ol, details.help ul { margin: 4px 0 8px 18px; padding: 0; }
+  #filterNote { font-size: 13px; margin: -4px 0 8px; min-height: 1.2em; }
+  .empty { padding: 14px; color: var(--muted); font-size: 14px; }
+  @media (max-width: 900px) {
+    .tools { grid-template-columns: 1fr; }
+    .tools .tall { grid-row: auto; }
+    .appbar { grid-template-columns: minmax(0, 1fr) auto; top: 4px; }
+    .mkt { grid-column: 1 / -1; order: 3; }
+    .appbar h1 { font-size: 19px; }
+    .frm { grid-template-columns: 1fr 1fr; }
+  }
+  html[data-theme="80s"] .card, html[data-theme="80s"] .appbar, html[data-theme="80s"] .modal .box {
+    box-shadow: 0 0 0 1px rgba(255,46,151,.12), 0 0 22px rgba(255,46,151,.14), inset 0 0 18px rgba(77,225,255,.04);
+  }
+  html[data-theme="80s"] .stat span, html[data-theme="80s"] .card h2 { color: var(--cyan); }
+  html[data-theme="80s"] .card h2 { font-family: "Audiowide", "Orbitron", system-ui, sans-serif; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; font-size: 15px; }
+  html[data-theme="80s"] .chk.mid .chkbar i, html[data-theme="80s"] .meter.mid i { background: var(--gold); }
+  html[data-theme="80s"] .pill.pre, html[data-theme="80s"] .pill.wait { color: var(--gold); }
 </style>
 </head>
 <body>
 <main>
-  <div class="titlebar"><h1>Pre-market scanner</h1><button class="quiet" id="themeBtn" type="button">Classic colors</button></div>
-  <p class="sub">Scans for low-priced US stocks (set the price range below). <strong>Tomorrow’s watchlist</strong> (run in the evening) finds after-hours movers, fresh news since the close, and strong closers before the morning crowd. <strong>Morning scan</strong> (run 8:00–9:15 AM Eastern) shows which ones are actually gapping with real volume. <strong>Right now</strong> (any time during market hours) rates which stocks are surging at the moment.</p>
+  <header class="appbar">
+    <div class="brand"><h1>Pre-market scanner</h1><span class="tagline">Find the movers, check the odds, size the trade</span></div>
+    <div class="mkt"><span id="mktPill" class="pill closed">—</span><span id="mktClock" class="clock"></span></div>
+    <button class="quiet" id="themeBtn" type="button">Classic colors</button>
+    <div class="hintbar" id="mktHint"></div>
+  </header>
 
   <section class="quick" id="dailySec">
     <div class="qcards">
@@ -280,6 +368,84 @@
       <div id="dHist"></div>
     </details>
   </section>
+
+  <section class="tools" id="toolsSec">
+    <div class="card tall" id="livePanel">
+      <div class="cardhead"><h2>Live watch</h2><span id="lwStatus" class="pill off">Off</span></div>
+      <p class="hint2">Real-time prices for your open trades and anything you add (up to 30). The free plan streams one exchange (IEX, about 2.5% of volume), so thin stocks can look stale. Alerts fire when a position reaches its stop or target.</p>
+      <div class="bar">
+        <input type="text" id="lwAdd" placeholder="Add ticker" autocomplete="off" spellcheck="false" maxlength="6" style="max-width:130px">
+        <button class="quiet" id="lwAddBtn" type="button">Add</button>
+        <button id="lwToggle" type="button">Start live</button>
+        <label class="auto"><input type="checkbox" id="lwSound" checked> Sound alerts</label>
+      </div>
+      <div id="lwNote" class="muted" style="font-size:13px;min-height:1.2em"></div>
+      <div id="lwAlerts" class="alerts"></div>
+      <div class="lwwrap"><table class="lw"><thead><tr><th>Ticker</th><th>Last</th><th>Change</th><th>Bid / Ask</th><th>Last trade</th><th></th></tr></thead><tbody id="lwRows"></tbody></table></div>
+      <div class="empty" id="lwEmpty">Nothing to watch yet. Tap “+ Watch” on any scan result, or add a ticker above.</div>
+    </div>
+    <div class="card" id="sizer">
+      <div class="cardhead"><h2>Position sizer</h2></div>
+      <p class="hint2">How many shares fit your risk? Decide the most you’re willing to lose first, then let the math pick the size.</p>
+      <div class="frm">
+        <label>Account value $<input type="number" id="szAcct" step="1" min="0"></label>
+        <label>Max loss (% of account)<input type="number" id="szRisk" step="0.1" min="0.1" value="1.5"></label>
+        <label>Entry price $<input type="number" id="szEntry" step="0.0001" min="0"></label>
+        <label>Stop below entry (%)<input type="number" id="szStop" step="0.5" min="1" value="8"></label>
+        <label>Target above entry (%)<input type="number" id="szTarget" step="0.5" min="1" value="15"></label>
+      </div>
+      <div id="szOut"></div>
+    </div>
+    <div class="card" id="guard">
+      <div class="cardhead"><h2>Risk guard</h2></div>
+      <div id="lossOut"></div>
+      <label class="auto" style="font-size:13px">Daily loss limit (% of account) <input type="number" id="lossPct" step="0.5" min="0.5" value="3" style="max-width:80px"></label>
+      <h3 style="margin:14px 0 4px">Before every buy</h3>
+      <div class="pretrade" id="pretrade">
+        <label><input type="checkbox"> I know why it’s moving</label>
+        <label><input type="checkbox"> My stop goes in the moment I buy</label>
+        <label><input type="checkbox"> My target sell is ready</label>
+        <label><input type="checkbox"> The size fits my risk plan</label>
+        <label><input type="checkbox"> I’m not chasing a spike</label>
+        <div class="go" id="pretradeGo"></div>
+      </div>
+    </div>
+  </section>
+
+  <details class="card help" id="helpBox" style="margin:0 0 18px">
+    <summary>New here? How to use this page</summary>
+    <h3>A simple daily routine (Eastern time)</h3>
+    <ol>
+      <li><strong>After 8 PM:</strong> run <em>Tomorrow’s watchlist</em>. It finds after-hours movers and news since the close. Pick 2–3 names to study.</li>
+      <li><strong>8:15 AM:</strong> run the <em>Morning scan</em>. It shows who is actually gapping with real volume. Don’t buy pre-market.</li>
+      <li><strong>9:30 to 9:46:</strong> let the opening settle. Prices swing wildly in the first minutes.</li>
+      <li><strong>9:46 onward:</strong> run <em>Right now</em>. Look for stocks near their highs, above their average price, with steady volume.</li>
+      <li><strong>Every buy:</strong> open the stock’s <em>Plan</em>, enter the order, and set the stop and target immediately.</li>
+      <li><strong>3:30 PM:</strong> sell what isn’t working. Log your account value after the close.</li>
+    </ol>
+    <h3>How to read the bars</h3>
+    <ul>
+      <li><strong>Checklist</strong> counts how many of the page’s rules a stock meets (real news, no red flags, volume, trend, history). It is <em>not</em> a buy signal. A high bar means fewer reasons to skip it.</li>
+      <li><strong>Odds up</strong> is a base rate from history: how often similar gaps finished above their open. Below 50% is normal, since most gaps fade.</li>
+      <li>The small <strong>+15%</strong> and <strong>−7%</strong> numbers show how often those levels were touched at some point. A high −7% number means tight stops get hit.</li>
+    </ul>
+    <h3>Rules that protect you</h3>
+    <ul>
+      <li>Decide your maximum loss before you buy. Use the Position sizer.</li>
+      <li>Stops don’t work before 9:30 or after 4:00, and gaps can jump past them.</li>
+      <li>Never add to a loser. Never chase after a spike.</li>
+      <li>Under $1, spreads are wide and exits are hard. Keep those tiny.</li>
+      <li>If you hit your daily loss limit, you’re done for the day.</li>
+    </ul>
+    <h3>Words you’ll see</h3>
+    <ul>
+      <li><strong>Gap:</strong> how far the price opened above yesterday’s close.</li>
+      <li><strong>VWAP:</strong> the day’s volume-weighted average price. Above it means buyers are in control.</li>
+      <li><strong>Pre-market / after hours:</strong> thin extended-hours trading. Limit orders only.</li>
+      <li><strong>Red flag:</strong> an offering, reverse split, listing warning, or going-concern note. These often mean selling pressure.</li>
+    </ul>
+    <p class="hint2">This page is a research tool, not advice. Most small stocks that spike fade, so size every trade as money you can lose.</p>
+  </details>
 
   <details class="keys" id="keysBox">
     <summary>Alpaca API keys</summary>
@@ -320,7 +486,11 @@
     <label class="auto range">Price range
       <select id="minPrice"><option value="0.25">$0.25</option><option value="0.5">$0.50</option><option value="1">$1.00</option></select> to
       <select id="maxPrice"><option value="5">$5</option><option value="7.5">$7.50</option><option value="10">$10</option></select></label>
+    <label class="auto"><input type="checkbox" id="fNews" checked> News only</label>
+    <label class="auto"><input type="checkbox" id="fFlags" checked> Hide red-flag stocks</label>
+    <label class="auto">Auto-refresh Right now <select id="autoNow"><option value="0">Off</option><option value="2">every 2 min</option><option value="5">every 5 min</option><option value="10">every 10 min</option></select></label>
   </div>
+  <div id="filterNote" class="muted"></div>
 
   <div id="status">Enter your keys, then run a scan.</div>
   <div class="tablewrap"><div class="empty" id="empty">No results yet.</div><table id="tbl" class="cards" hidden>
@@ -379,6 +549,29 @@
       <button class="quiet" id="tSeed">Add my earlier trades</button>
     </div>
   </section>
+
+<div class="modal" id="planModal" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="pTitle">
+    <div class="cardhead"><h2 id="pTitle">Trade plan</h2><button class="quiet mini" id="pClose" type="button">Close</button></div>
+    <p class="hint2">A plan to react to, not advice. Change the numbers to match your comfort.</p>
+    <div class="frm">
+      <label>Account value $<input type="number" id="pAcct" step="1" min="0"></label>
+      <label>Max loss (% of account)<input type="number" id="pRisk" step="0.1" min="0.1"></label>
+      <label>Entry price $<input type="number" id="pEntry" step="0.0001" min="0"></label>
+      <label>Stop below entry (%)<input type="number" id="pStop" step="0.5" min="1"></label>
+      <label>Target above entry (%)<input type="number" id="pTarget" step="0.5" min="1"></label>
+    </div>
+    <div id="pOut"></div>
+    <h3 style="margin:12px 0 4px">Rules check</h3>
+    <ul class="checklist" id="pChecks"></ul>
+    <div class="bar">
+      <button id="pPaper" type="button">Log paper buy</button>
+      <button class="quiet" id="pReal" type="button">I bought it (log real)</button>
+      <button class="quiet" id="pWatch" type="button">+ Live watch</button>
+    </div>
+    <div id="pMsg" class="muted" style="font-size:13px;min-height:1.2em"></div>
+  </div>
+</div>
 </main>
 
 <script>
@@ -397,7 +590,7 @@ const RED_FLAGS = { "offering":-4, "registered direct":-4, "dilution":-3, "warra
   "going concern":-4, "misses":-2 };
 
 const $ = id => document.getElementById(id);
-let lastResults = [], lastMode = "premarket";
+let lastResults = [], lastMode = "premarket", lastRaw = [];
 
 // ---------- storage (local conveniences only) ----------
 function load(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }
@@ -556,10 +749,10 @@ async function scan() {
       r.score = Math.min(r.gap, 60) * 0.6 + Math.min(r.volPct, 50) * 0.4 + pts * 4;
     }
     rows.sort((a, b) => b.score - a.score);
-    lastResults = rows; lastMode = "premarket";
-    await enrichHistory(rows.slice(0, SHOW_TOP));
-    try { attachOdds(rows, "gap", await getOdds(cands)); } catch { /* odds are optional */ }
-    render(rows.slice(0, SHOW_TOP));
+    lastRaw = rows; lastResults = applyFilters(rows); lastMode = "premarket";
+    await enrichHistory(lastResults.slice(0, SHOW_TOP));
+    try { attachOdds(lastResults, "gap", await getOdds(cands)); } catch { /* odds are optional */ }
+    render(lastResults.slice(0, SHOW_TOP));
     savePicks(et().date, rows.slice(0, SHOW_TOP));
     const done = et();
     status(`Checked ${cands.length.toLocaleString()} active stocks under $5 in ${Math.round((Date.now() - t0) / 1000)}s. Results as of ${fmtTime(done)} ET (consolidated data through ${fmtTime(et(dataEnd))}).`);
@@ -751,10 +944,10 @@ async function watchlist() {
       delete r.base;
     }
     rows.sort((a, b) => b.score - a.score);
-    lastResults = rows; lastMode = "watchlist";
-    await enrichHistory(rows.slice(0, SHOW_TOP));
-    try { attachOdds(rows, "next", await getOdds(cands)); } catch { /* odds are optional */ }
-    renderWatch(rows.slice(0, SHOW_TOP));
+    lastRaw = rows; lastResults = applyFilters(rows); lastMode = "watchlist";
+    await enrichHistory(lastResults.slice(0, SHOW_TOP));
+    try { attachOdds(lastResults, "next", await getOdds(cands)); } catch { /* odds are optional */ }
+    renderWatch(lastResults.slice(0, SHOW_TOP));
     status(`Watchlist for the session after ${D}: scanned ${symbols.length.toLocaleString()} stocks in ${Math.round((Date.now() - t0) / 1000)}s, data through ${fmtTime(et(end))} ET. Run the morning scan before the open to see which ones are actually gapping.`);
     $("csvBtn").disabled = false;
   } catch (e) {
@@ -865,10 +1058,10 @@ async function nowScan() {
       delete r.dataPrice;
     }
     rows.sort((a, b) => b.score - a.score);
-    lastResults = rows; lastMode = "rightnow";
-    await enrichHistory(rows.slice(0, SHOW_TOP));
-    try { attachOdds(rows, "gap", await getOdds(cands)); } catch { /* odds are optional */ }
-    renderNow(rows.slice(0, SHOW_TOP));
+    lastRaw = rows; lastResults = applyFilters(rows); lastMode = "rightnow";
+    await enrichHistory(lastResults.slice(0, SHOW_TOP));
+    try { attachOdds(lastResults, "gap", await getOdds(cands)); } catch { /* odds are optional */ }
+    renderNow(lastResults.slice(0, SHOW_TOP));
     status(`Right now, as of ${fmtTime(et())} ET: full-market data through ${fmtTime(et(end))} (15 minutes behind on the free plan), with live prices checked on one exchange. Scanned in ${Math.round((Date.now() - t0) / 1000)}s.`);
     $("csvBtn").disabled = false;
   } catch (e) {
@@ -1744,6 +1937,383 @@ $("copyLink").addEventListener("click", async () => {
   });
 })();
 
+</script>
+<script>
+// =====================================================================
+// Novice dashboard: market clock, filters, checklist bars, trade plans,
+// position sizer, risk guard, live watch (websocket), auto-refresh.
+// =====================================================================
+
+// ---------- market clock and "what to do now" ----------
+function nvPhase(now = et()) {
+  const m = mins(now);
+  if (!isWeekday(now)) return { key: "closed", label: "Weekend", hint: "Markets are closed. Review your trade log and plan the week." };
+  if (m < 240) return { key: "closed", label: "Closed", hint: "Overnight. Pre-market opens at 4:00 AM ET." };
+  if (m < 480) return { key: "pre", label: "Pre-market", hint: "Very thin trading. Wait for the 8:15 Morning scan." };
+  if (m < 555) return { key: "pre", label: "Pre-market", hint: "Run the Morning scan now and pick 2–3 names to watch. Don’t buy pre-market." };
+  if (m < 570) return { key: "pre", label: "Pre-market", hint: `Opens in ${570 - m} min. Make your plan and don’t chase.` };
+  if (m < 586) return { key: "open", label: "Market open", hint: "Let the first 15 minutes settle before you buy anything." };
+  if (m < 930) return { key: "open", label: "Market open", hint: "Run Right now. Every buy needs a stop and a target." };
+  if (m < 960) return { key: "open", label: "Market open", hint: "Last half hour: sell what isn’t working (your 3:30 rule)." };
+  if (m < 1200) return { key: "after", label: "After hours", hint: "Limit orders only, and stops don’t work. Run Tomorrow’s watchlist after 8 PM." };
+  return { key: "closed", label: "Closed", hint: "Run Tomorrow’s watchlist, then log today’s account value." };
+}
+function nvClock() {
+  const t = et(), p = nvPhase(t);
+  $("mktPill").textContent = p.label; $("mktPill").className = "pill " + p.key;
+  $("mktClock").textContent = fmtTime(t) + " ET";
+  $("mktHint").textContent = p.hint;
+}
+
+// ---------- filters: news only, hide red flags ----------
+function nvRedFlags(r) {
+  const h = r.headline || "", out = new Set();
+  if (h) BAD_TAGS.forEach(([t, re]) => { if (re.test(h)) out.add(t); });
+  (r.flags || []).forEach(f => out.add(FLAG_LABEL[f] || f));
+  if (h && smallDeal(h)) out.add("Small deal");
+  if (/(suspend|terminat|withdr|cancel)\w*[^.]{0,40}offering|offering[^.]{0,25}(suspend|terminat|withdr|cancel)/i.test(h)) out.delete("Offering");
+  return [...out];
+}
+function nvFilters() { return { news: load("f_news") !== "0", flags: load("f_flags") !== "0" }; }
+function applyFilters(rows) {
+  const f = nvFilters();
+  return rows.filter(r => (!f.news || !!r.headline) && (!f.flags || !nvRedFlags(r).length));
+}
+function nvFilterNote() {
+  const raw = lastRaw.length, shown = lastResults.length, f = nvFilters();
+  if (!raw) { $("filterNote").textContent = ""; return; }
+  const on = [f.news && "news only", f.flags && "red flags hidden"].filter(Boolean).join(" and ");
+  $("filterNote").textContent = !on ? `Showing all ${raw} results.` :
+    shown ? `Showing ${shown} of ${raw} (${on}). Turn a filter off to see the rest.` :
+    `Nothing passed your filters (${on}). Turn one off to see ${raw} results.`;
+}
+async function nvRerender() {
+  if (!lastRaw.length) { nvFilterNote(); return; }
+  lastResults = applyFilters(lastRaw);
+  const top = lastResults.slice(0, SHOW_TOP);
+  try {
+    await enrichHistory(top);
+    attachOdds(lastResults, lastMode === "watchlist" ? "next" : "gap", await getOdds(lastRaw.map(r => r.ticker)));
+  } catch { /* optional */ }
+  (lastMode === "premarket" ? render : lastMode === "watchlist" ? renderWatch : renderNow)(top);
+  nvFilterNote();
+}
+
+// ---------- the checklist bar ----------
+function nvChecks(r, mode) {
+  const c = [], add = (label, pass, detail) => c.push({ label, pass: !!pass, detail });
+  add("Real news behind the move", !!r.headline, r.headline ? "A company headline exists" : "No company news found");
+  const flags = nvRedFlags(r);
+  add("No red flags in the news", !!r.headline && !flags.length, !r.headline ? "No news to check" : flags.length ? flags.join(", ") : "None found");
+  add("Price is $1 or more", r.price >= 1, `Price ${money(r.price)}. Under $1 means wide spreads and harder exits`);
+  if (mode === "premarket") {
+    add("Volume confirms (25%+ of a normal day)", r.volPct >= 25, `${Math.round(r.volPct)}% of an average day`);
+    add("Gap is a workable size (3–30%)", r.gap >= 3 && r.gap <= 30, `Gap ${r.gap.toFixed(1)}%`);
+  } else if (mode === "watchlist") {
+    add("Heavy volume today (2× normal)", r.volX >= 2, `${r.volX.toFixed(1)}× its normal volume`);
+    add("Closed near its high (70%+)", r.nearHigh >= 70, `Closed at ${Math.round(r.nearHigh)}% of the day’s range`);
+    add("After-hours not fading", r.ahChg >= -3, `After hours ${r.ahChg >= 0 ? "+" : "−"}${Math.abs(r.ahChg).toFixed(1)}%`);
+  } else {
+    add("Volume surge (3× normal, 6+ busy minutes)", r.surge >= 3 && r.busy >= 6, `${r.surge.toFixed(1)}× normal, ${r.busy} busy minutes`);
+    add("Above its average price (VWAP)", r.vsVwap > 0, `${r.vsVwap >= 0 ? "+" : "−"}${Math.abs(r.vsVwap).toFixed(1)}% vs VWAP`);
+    add("Near the day’s high (within 3%)", r.nearHigh >= 97, `At ${r.nearHigh.toFixed(1)}% of the high`);
+    add("Still rising (last 15 minutes)", r.move15 > 0, `${r.move15 >= 0 ? "+" : "−"}${Math.abs(r.move15).toFixed(1)}% in 15 min`);
+  }
+  if (r.hist) add("Not a serial spiker", r.hist.spikes < 3, `${r.hist.spikes} spikes of 50%+ in the last 6 months`);
+  if (r.odds) add("History favors it (odds 45%+)", r.odds.p >= 45, `${r.odds.p.toFixed(0)}% of similar cases finished above the open`);
+  return c;
+}
+function nvCheckCell(r, mode, i) {
+  const cs = nvChecks(r, mode), pass = cs.filter(x => x.pass).length, n = cs.length, f = n ? pass / n : 0;
+  const cls = f >= 0.75 ? "hi" : f >= 0.5 ? "mid" : "lo";
+  const tip = cs.map(x => `${x.pass ? "✓" : "✗"} ${x.label}: ${x.detail}`).join("\n");
+  return `<div class="chk ${cls}" title="${esc(tip)}"><div class="chkbar"><i style="width:${Math.round(f * 100)}%"></i></div>` +
+    `<b>${pass}/${n}</b><small>rules met</small></div>` +
+    `<button class="mini" data-act="plan" data-i="${i}">Plan</button><button class="mini quiet" data-act="pin" data-i="${i}" title="Add to Live watch">+ Watch</button>`;
+}
+const NV_HELP = {
+  "gap": "How far the price is above yesterday’s close, before the open.",
+  "pre-mkt volume": "Shares traded before the open (data is 15 minutes behind).",
+  "% of avg day": "Pre-market volume as a percent of a normal full day. Bigger means more interest.",
+  "odds up": "Historical base rate: how often similar gaps finished the day above their open. Not a prediction.",
+  "checklist": "How many of the page’s rules this stock meets. It is not a buy signal.",
+  "volume, last 15 min": "Recent volume compared with normal. Busy minutes = minutes with at least 2× normal volume.",
+  "move, last 15 min": "How much the price rose or fell over the last 15 minutes.",
+  "from day’s high": "How far below the day’s high it trades. Near the high means buyers are still pressing.",
+  "vs. vwap": "Compared with the day’s volume-weighted average price. Above it means buyers are in control.",
+  "since data": "Price change since the delayed data ended, using the latest live trade.",
+  "today": "Change since yesterday’s close.",
+  "last price": "Latest regular price from the session.",
+  "after hours": "After-hours change and how many shares traded. Under about 20K shares can be unreliable.",
+  "volume vs avg": "How many times its normal daily volume traded today.",
+  "closed near high": "Where it closed within the day’s range. 100% = closed at the high.",
+  "score": "The scanner’s ranking number. Higher is more unusual activity, not a prediction.",
+  "rating": "The scanner’s ranking number. Higher is more unusual activity, not a prediction.",
+  "paper": "Log a practice trade at the current price with a stop and a +15% target."
+};
+function nvDecorate() {
+  const head = $("head").querySelector("tr");
+  if (head) {
+    if (!head.querySelector(".chkh")) {
+      const th = document.createElement("th"); th.className = "chkh"; th.textContent = "Checklist";
+      head.insertBefore(th, head.children[2] || null);
+    }
+    [...head.children].forEach(th => { const k = th.textContent.trim().toLowerCase(); if (NV_HELP[k]) th.title = NV_HELP[k]; });
+  }
+  [...$("rows").children].forEach((tr, i) => {
+    if (tr.querySelector(".chkc")) return;
+    const r = lastResults[i]; if (!r) return;
+    const td = document.createElement("td"); td.className = "chkc"; td.setAttribute("data-label", "Checklist");
+    td.innerHTML = nvCheckCell(r, lastMode, i);
+    tr.insertBefore(td, tr.children[2] || null);
+  });
+  nvFilterNote();
+}
+
+// ---------- position sizing ----------
+function nvAccount() { const d = loadDays(); return d.length ? d[d.length - 1].value : 1000; }
+function nvDefaultStop(p) { return p < 1 ? 12 : p < 3 ? 9 : 7; }
+function nvSize({ account, riskPct, entry, stopPct, targetPct }) {
+  const riskDollars = account * riskPct / 100, perShare = entry * stopPct / 100;
+  let shares = perShare > 0 ? Math.floor(riskDollars / perShare) : 0;
+  const maxPos = account * 0.25, maxShares = entry > 0 ? Math.floor(maxPos / entry) : 0;
+  const capped = shares > maxShares; if (capped) shares = maxShares;
+  shares = Math.max(0, shares);
+  return { shares, cost: shares * entry, pct: account > 0 ? shares * entry / account * 100 : 0,
+    stop: entry * (1 - stopPct / 100), target: entry * (1 + targetPct / 100),
+    loss: shares * perShare, gain: shares * entry * targetPct / 100, rr: stopPct > 0 ? targetPct / stopPct : 0,
+    capped, maxPos, riskDollars };
+}
+function nvPlanHtml(o, inp) {
+  const w = [];
+  if (!o.shares) w.push(["Your risk budget can’t cover even one share with that stop. Skip it, or raise the budget on purpose.", false]);
+  if (o.capped) w.push([`Size capped at 25% of your account (${money(o.maxPos)}), so your real risk is lower than the budget.`, true]);
+  if (inp.entry < 1) w.push(["Under $1: spreads are wide and stops can fill far from your price.", false]);
+  if (inp.stopPct < 5) w.push(["A stop under 5% is tighter than these stocks’ normal wiggles. Expect to be stopped out.", false]);
+  if (o.rr < 1.5) w.push(["Your target is under 1.5× your risk. Raise the target or tighten the stop.", false]);
+  w.push(["Stops don’t work before 9:30 or after 4:00, and a gap can jump past them.", true]);
+  return `<div class="stats3">
+      <div class="stat"><span>Shares</span><b>${o.shares}</b></div>
+      <div class="stat"><span>Position</span><b>${money(o.cost)}</b></div>
+      <div class="stat"><span>% of account</span><b>${o.pct.toFixed(0)}%</b></div>
+      <div class="stat"><span>Stop price</span><b>${money(o.stop)}</b></div>
+      <div class="stat"><span>Target price</span><b>${money(o.target)}</b></div>
+      <div class="stat"><span>Reward : risk</span><b>${o.rr.toFixed(1)} : 1</b></div>
+    </div>
+    <div class="stats3"><div class="stat"><span>Loss if stopped</span><b class="neg">−${money(o.loss)}</b></div>
+      <div class="stat"><span>Gain at target</span><b class="pos">+${money(o.gain)}</b></div>
+      <div class="stat"><span>Order to place</span><b style="font-size:13px">Limit buy at ask</b></div></div>` +
+    w.map(([t, soft]) => `<div class="warn${soft ? " soft" : ""}">${esc(t)}</div>`).join("");
+}
+function nvReadForm(p) {
+  const n = id => +$(p + id).value;
+  return { account: n("Acct"), riskPct: n("Risk"), entry: n("Entry"), stopPct: n("Stop"), targetPct: n("Target") };
+}
+function nvSizerCalc() { const inp = nvReadForm("sz"); $("szOut").innerHTML = inp.entry > 0 && inp.account > 0 ? nvPlanHtml(nvSize(inp), inp) : `<div class="empty">Enter an entry price to see the plan.</div>`; }
+function nvPlanCalc() { const inp = nvReadForm("p"); $("pOut").innerHTML = inp.entry > 0 && inp.account > 0 ? nvPlanHtml(nvSize(inp), inp) : ""; }
+let nvPlanRow = null;
+function nvSetupName(r) {
+  return lastMode === "premarket" ? (r.headline ? "News gap (pre-market)" : "No-news gap")
+    : lastMode === "watchlist" ? "After-hours mover" : (r.headline ? "Momentum + news" : "Momentum / chase");
+}
+function nvOpenPlan(r) {
+  nvPlanRow = r;
+  $("pTitle").textContent = `${r.ticker} trade plan`;
+  $("pAcct").value = nvAccount(); $("pRisk").value = load("risk_pct") || "1.5";
+  $("pEntry").value = r.price; $("pStop").value = nvDefaultStop(r.price); $("pTarget").value = "15";
+  $("pChecks").innerHTML = nvChecks(r, lastMode).map(x => `<li class="${x.pass ? "ok" : "no"}"><b>${x.pass ? "✓" : "✗"}</b>${esc(x.label)}<small>${esc(x.detail)}</small></li>`).join("");
+  $("pMsg").textContent = ""; $("planModal").hidden = false; nvPlanCalc();
+}
+function nvLogFromPlan(paper) {
+  if (!nvPlanRow) return;
+  const inp = nvReadForm("p"), o = nvSize(inp);
+  if (!o.shares) { $("pMsg").textContent = "Nothing to log: the plan has 0 shares."; return; }
+  logBuy({ ticker: nvPlanRow.ticker, shares: o.shares, buy: inp.entry, stop: +o.stop.toFixed(4), setup: nvSetupName(nvPlanRow), paper });
+  save("risk_pct", String(inp.riskPct));
+  $("pMsg").textContent = paper ? `Logged a paper buy of ${o.shares} ${nvPlanRow.ticker}.` : `Logged your real buy of ${o.shares} ${nvPlanRow.ticker}. Now place the stop and target orders at Schwab.`;
+}
+
+// ---------- risk guard ----------
+function nvTodayPL() {
+  const today = et().date;
+  return loadTrades().filter(t => !t.paper && t.sell != null && t.sellTime && et(new Date(t.sellTime)).date === today)
+    .reduce((a, t) => a + (t.sell - t.buy) * t.shares, 0);
+}
+function nvGuard() {
+  const acct = nvAccount(), pct = +$("lossPct").value || 3, limit = acct * pct / 100, pl = nvTodayPL();
+  const used = pl < 0 ? Math.min(1, -pl / limit) : 0, cls = used >= 1 ? "lo" : used >= 0.6 ? "mid" : "";
+  $("lossOut").innerHTML = `<div class="stats3" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Realized today</span><b class="${pl >= 0 ? "pos" : "neg"}">${pl >= 0 ? "+" : "−"}${money(Math.abs(pl))}</b></div>` +
+    `<div class="stat"><span>Daily loss limit</span><b>${money(limit)}</b></div></div><div class="meter ${cls}"><i style="width:${Math.round(used * 100)}%"></i></div>` +
+    (used >= 1 ? `<div class="warn">You’ve hit your daily loss limit. Stop trading for today.</div>` :
+     used >= 0.6 ? `<div class="warn">You’re close to your limit. Smaller size or no more trades.</div>` :
+     `<div class="warn soft">Realized trades only. Hitting the limit means you’re done for the day.</div>`);
+}
+function nvPretrade() {
+  const boxes = [...$("pretrade").querySelectorAll("input")], all = boxes.length && boxes.every(b => b.checked);
+  $("pretradeGo").textContent = all ? "✓ Good to go. Place the buy, then the stop and target." : "";
+  $("pretradeGo").className = "go " + (all ? "pos" : "");
+}
+
+// ---------- live watch (Alpaca websocket, IEX) ----------
+const NV = { ws: null, want: false, retry: 0, fatal: false, quotes: {}, prev: {}, subs: new Set(), alerted: {}, queued: false };
+function nvWatchList() { try { return JSON.parse(load("watch") || "[]"); } catch { return []; } }
+function nvPositions() { return loadTrades().filter(t => !t.paper && t.sell == null); }
+function nvSymbols() { const s = new Set(nvPositions().map(t => t.ticker)); nvWatchList().forEach(x => s.add(x)); return [...s].slice(0, 30); }
+function nvNote(m) { $("lwNote").textContent = m || ""; }
+function nvSetStatus(txt, cls) { $("lwStatus").textContent = txt; $("lwStatus").className = "pill " + (cls || "off"); $("lwToggle").textContent = NV.want ? "Stop live" : "Start live"; }
+function nvWatchAdd(sym) {
+  sym = String(sym || "").trim().toUpperCase();
+  if (!/^[A-Z.]{1,6}$/.test(sym)) { nvNote("That doesn’t look like a ticker."); return false; }
+  const list = nvWatchList();
+  if (!list.includes(sym)) {
+    if (nvSymbols().length >= 30 && !nvPositions().some(t => t.ticker === sym)) { nvNote("The free plan streams 30 symbols. Remove one first."); return false; }
+    list.push(sym); save("watch", JSON.stringify(list));
+  }
+  nvNote(`Watching ${sym}.`); nvSync(); nvLoadPrev([sym]).then(nvQueue); nvQueue(); return true;
+}
+function nvWatchRemove(sym) { save("watch", JSON.stringify(nvWatchList().filter(x => x !== sym))); nvSync(); nvQueue(); }
+async function nvLoadPrev(syms) {
+  const need = syms.filter(s => !(s in NV.prev)); if (!need.length || !keysReady()) return;
+  try {
+    const midnight = etToday(0, 0);
+    const bars = await getBars(need, { timeframe: "1Day", adjustment: "split",
+      start: new Date(midnight.getTime() - 12 * 86400000).toISOString(), end: new Date(midnight.getTime() - 60000).toISOString() }, "Loading previous closes", nvNote);
+    need.forEach(s => { const b = bars[s]; NV.prev[s] = b && b.length ? b[b.length - 1].c : null; });
+  } catch { /* optional */ }
+}
+function nvSend(o) { if (NV.ws && NV.ws.readyState === 1) NV.ws.send(JSON.stringify(o)); }
+function nvSync() {
+  if (!NV.ws || NV.ws.readyState !== 1 || !NV.authed) return;
+  const want = new Set(nvSymbols()), add = [...want].filter(s => !NV.subs.has(s)), drop = [...NV.subs].filter(s => !want.has(s));
+  if (add.length) nvSend({ action: "subscribe", trades: add, quotes: add });
+  if (drop.length) nvSend({ action: "unsubscribe", trades: drop, quotes: drop });
+  NV.subs = want;
+}
+function nvStart() {
+  if (!keysReady()) { nvSetStatus("Keys needed", "err"); nvNote("Enter both Alpaca keys first (the API keys box)."); return; }
+  NV.want = true; NV.fatal = false; save("live_on", "1");
+  try { if (window.Notification && Notification.permission === "default") Notification.requestPermission(); } catch {}
+  nvConnect();
+}
+function nvStop() { NV.want = false; save("live_on", "0"); if (NV.ws) try { NV.ws.close(); } catch {} NV.ws = null; NV.authed = false; nvSetStatus("Off", "off"); }
+function nvConnect() {
+  if (NV.ws) try { NV.ws.close(); } catch {}
+  nvSetStatus("Connecting…", "wait"); NV.authed = false;
+  const ws = new WebSocket("wss://stream.data.alpaca.markets/v2/iex"); NV.ws = ws; NV.subs = new Set();
+  ws.onmessage = ev => { let ms; try { ms = JSON.parse(ev.data); } catch { return; } (Array.isArray(ms) ? ms : [ms]).forEach(nvOnMsg); };
+  ws.onclose = () => {
+    if (NV.ws !== ws) return; NV.ws = null; NV.authed = false;
+    if (NV.want && !NV.fatal) {
+      nvSetStatus("Reconnecting…", "wait"); NV.retry = Math.min(NV.retry + 1, 6);
+      setTimeout(() => { if (NV.want && !NV.ws && !NV.fatal) nvConnect(); }, Math.min(30000, 1500 * 2 ** NV.retry));
+    } else nvSetStatus(NV.fatal ? "Stopped" : "Off", NV.fatal ? "err" : "off");
+  };
+  ws.onerror = () => {};
+}
+function nvOnMsg(m) {
+  if (m.T === "success" && m.msg === "connected") nvSend({ action: "auth", key: $("keyId").value.trim(), secret: $("secret").value.trim() });
+  else if (m.T === "success" && m.msg === "authenticated") { NV.retry = 0; NV.authed = true; nvSetStatus("Live", "ok"); nvNote(""); nvSync(); nvLoadPrev(nvSymbols()).then(nvQueue); }
+  else if (m.T === "error") {
+    const c = m.code, text = c === 402 || c === 401 ? "Alpaca rejected your keys. Check them in the API keys box."
+      : c === 406 ? "Another page or device is already streaming. The free plan allows one connection, so close the other one."
+      : c === 405 ? "Too many symbols. The free plan streams 30."
+      : `Stream error ${c || ""} ${m.msg || ""}`;
+    nvNote(text);
+    if (c === 402 || c === 401 || c === 406) { NV.fatal = true; nvSetStatus("Stopped", "err"); }
+  }
+  else if (m.T === "t") nvOnTrade(m);
+  else if (m.T === "q") nvOnQuote(m);
+}
+const nvTime = s => { const t = Date.parse(String(s || "").replace(/(\.\d{3})\d+/, "$1")); return isNaN(t) ? Date.now() : t; };
+function nvOnTrade(m) {
+  const q = NV.quotes[m.S] ||= {}; q.p = m.p; q.t = nvTime(m.t);
+  nvAlerts(m.S, m.p); nvQueue();
+}
+function nvOnQuote(m) { const q = NV.quotes[m.S] ||= {}; q.bp = m.bp; q.ap = m.ap; nvQueue(); }
+function nvAlertShow(text, good) {
+  const box = $("lwAlerts"), d = document.createElement("div");
+  d.className = "al" + (good ? " good" : ""); d.textContent = `${fmtTime(et())}  ${text}`;
+  box.insertBefore(d, box.firstChild); while (box.children.length > 5) box.removeChild(box.lastChild);
+  try { if ($("lwSound").checked) nvBeep(); if (window.Notification && Notification.permission === "granted") new Notification(text); } catch {}
+}
+function nvBeep() {
+  try { const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = 0.08; o.start(); setTimeout(() => { o.stop(); a.close(); }, 300); } catch {}
+}
+function nvAlerts(sym, p) {
+  nvPositions().filter(t => t.ticker === sym).forEach(t => {
+    const hit = (kind, text, good) => { const k = `${t.id}:${kind}`; if (Date.now() - (NV.alerted[k] || 0) < 300000) return; NV.alerted[k] = Date.now(); nvAlertShow(text, good); };
+    if (t.stop && p <= t.stop) hit("stop", `${sym} is at ${money(p)}, at or below your ${money(t.stop)} stop. Check your order.`, false);
+    else if (t.target && p >= t.target) hit("target", `${sym} reached ${money(p)}, at or above your ${money(t.target)} target. Time to take the win.`, true);
+  });
+}
+function nvQueue() { if (NV.queued) return; NV.queued = true; setTimeout(() => { NV.queued = false; nvRender(); }, 350); }
+function nvRender() {
+  const syms = nvSymbols(), pos = nvPositions();
+  $("lwEmpty").hidden = !!syms.length;
+  const now = Date.now();
+  $("lwRows").innerHTML = syms.map(s => {
+    const q = NV.quotes[s] || {}, prev = NV.prev[s], t = pos.find(x => x.ticker === s);
+    const chg = q.p && prev ? (q.p / prev - 1) * 100 : null;
+    const age = q.t ? Math.max(0, Math.round((now - q.t) / 1000)) : null;
+    const ageTxt = age === null ? "—" : age < 90 ? `${age}s ago` : age < 3600 ? `${Math.round(age / 60)}m ago` : "stale";
+    const spread = q.bp && q.ap ? (q.ap - q.bp) / q.ap * 100 : null;
+    const hot = t && q.p && ((t.stop && q.p <= t.stop) || (t.target && q.p >= t.target));
+    return `<tr class="${hot ? "hot" : ""}"><td class="tk">${tickerLink(s)}${t ? '<small>your position</small>' : ""}</td>
+      <td>${q.p ? money(q.p) : "—"}</td>
+      <td class="${chg === null ? "" : chg >= 0 ? "pos" : "neg"}">${chg === null ? "—" : sgn(chg)}</td>
+      <td>${q.bp && q.ap ? `${money(q.bp)} / ${money(q.ap)}${spread !== null ? `<small>spread ${spread.toFixed(1)}%</small>` : ""}` : "—"}</td>
+      <td>${ageTxt}${age !== null && age > 180 ? "<small>few trades on IEX</small>" : ""}</td>
+      <td>${t ? "" : `<button class="mini quiet" data-act="unwatch" data-s="${s}">✕</button>`}</td></tr>`;
+  }).join("");
+}
+
+// ---------- auto-refresh Right now ----------
+let nvLastAuto = 0;
+function nvAutoTick() {
+  const sel = +$("autoNow").value; if (!sel) return;
+  const t = et(), m = mins(t);
+  if (!isWeekday(t) || m < 586 || m >= 960 || $("nowBtn").disabled) return;
+  if (Date.now() - nvLastAuto < sel * 60000) return;
+  nvLastAuto = Date.now(); $("nowBtn").click();
+}
+
+// ---------- wiring ----------
+$("fNews").checked = nvFilters().news; $("fFlags").checked = nvFilters().flags;
+$("fNews").addEventListener("change", e => { save("f_news", e.target.checked ? "1" : "0"); nvRerender(); });
+$("fFlags").addEventListener("change", e => { save("f_flags", e.target.checked ? "1" : "0"); nvRerender(); });
+$("autoNow").value = load("auto_now") || "0";
+$("autoNow").addEventListener("change", e => { save("auto_now", e.target.value); nvLastAuto = 0; });
+new MutationObserver(nvDecorate).observe($("rows"), { childList: true });
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const act = b.dataset.act;
+  if (act === "plan" || act === "pin") {
+    const r = lastResults[+b.dataset.i]; if (!r) return;
+    if (act === "pin") { if (nvWatchAdd(r.ticker)) { b.textContent = "Added"; b.disabled = true; } } else nvOpenPlan(r);
+  } else if (act === "unwatch") nvWatchRemove(b.dataset.s);
+});
+document.addEventListener("input", e => {
+  const id = e.target.closest ? (e.target.closest("#planModal") ? "p" : e.target.closest("#sizer") ? "s" : e.target.closest("#guard") ? "g" : "") : "";
+  if (id === "p") nvPlanCalc(); else if (id === "s") nvSizerCalc();
+  else if (id === "g") { if (e.target.id === "lossPct") { save("loss_pct", e.target.value); nvGuard(); } else nvPretrade(); }
+});
+$("pClose").addEventListener("click", () => { $("planModal").hidden = true; });
+$("planModal").addEventListener("click", e => { if (e.target === $("planModal")) $("planModal").hidden = true; });
+$("pPaper").addEventListener("click", () => nvLogFromPlan(true));
+$("pReal").addEventListener("click", () => nvLogFromPlan(false));
+$("pWatch").addEventListener("click", () => { if (nvPlanRow) nvWatchAdd(nvPlanRow.ticker); });
+$("lwAddBtn").addEventListener("click", () => { if (nvWatchAdd($("lwAdd").value)) $("lwAdd").value = ""; });
+$("lwAdd").addEventListener("keydown", e => { if (e.key === "Enter") { if (nvWatchAdd($("lwAdd").value)) $("lwAdd").value = ""; } });
+$("lwToggle").addEventListener("click", () => { NV.want ? nvStop() : nvStart(); });
+$("lossPct").value = load("loss_pct") || "3";
+$("szAcct").value = nvAccount(); $("szEntry").value = "";
+nvClock(); setInterval(nvClock, 15000);
+nvGuard(); setInterval(nvGuard, 60000);
+nvPretrade(); nvSizerCalc(); nvRender(); nvLoadPrev(nvSymbols()).then(nvQueue);
+setInterval(nvAutoTick, 20000);
+setInterval(() => { if (NV.want) nvQueue(); }, 5000);
+if (load("live_on") === "1" && keysReady()) setTimeout(nvStart, 1500);
 </script>
 </body>
 </html>
