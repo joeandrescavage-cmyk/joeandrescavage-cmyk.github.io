@@ -117,6 +117,16 @@
   .odds.lo .oddsbar i { background: var(--flag); }
   .odds b { font-size: 15px; line-height: 1.1; }
   .odds small { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  /* Wild card meter */
+  .wc { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 76px; cursor: help; }
+  .wc svg { width: 68px; height: 42px; display: block; }
+  .wc .wctrack { stroke: var(--line); }
+  .wc .wcnum { fill: var(--ink); font-weight: 700; font-size: 17px; }
+  .wc small { font-size: 11px; font-weight: 700; margin-top: -2px; white-space: nowrap; }
+  .wc.q small { color: var(--muted); } .wc.q .wcarc { stroke: var(--muted); }
+  .wc.w small { color: #b8860b; }      .wc.w .wcarc { stroke: #d29922; }
+  .wc.h small { color: #d9622b; }      .wc.h .wcarc { stroke: #e8742a; }
+  .wc.x small { color: #d6336c; }      .wc.x .wcarc { stroke: #e64980; }
   .quick { margin: 0 0 18px; }
   .qcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
   .qc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
@@ -778,13 +788,14 @@ const big = v => v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? Math.round(v
 const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 const MORNING_HEAD = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Prev close</th><th>Gap</th>
-  <th>Pre-mkt volume</th><th>% of avg day</th><th>Odds up</th><th class="l">Latest news</th><th>Score</th></tr>`;
+  <th>Pre-mkt volume</th><th>% of avg day</th><th>Odds up</th><th>Wild card</th><th class="l">Latest news</th><th>Score</th></tr>`;
 function newsCell(r) {
   const tags = newsTags(r) + histTags(r);
   const head = r.headline ? (r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.headline)}</a>` : esc(r.headline)) : "No news in the last 36 hours";
   return (tags ? `<div>${tags}</div>` : "") + head;
 }
 function render(rows) {
+  rows.forEach(r => { r.wc = wildCard(r); });
   $("head").innerHTML = MORNING_HEAD;
   const maxGap = Math.max(...rows.map(r => Math.max(r.gap, 0)), 1);
   $("rows").innerHTML = rows.map((r, i) => {
@@ -796,6 +807,7 @@ function render(rows) {
       <td class="gap"><i style="width:calc(${w}% - 24px)"></i><span>${r.gap >= 0 ? "+" : ""}${r.gap.toFixed(1)}%</span></td>
       <td>${big(r.pmVol)}</td><td>${r.volPct.toFixed(0)}%</td>
       <td>${oddsCell(r)}</td>
+      <td>${wcCell(r)}</td>
       <td class="l news">${newsCell(r)}</td>
       <td class="score">${r.score.toFixed(1)}</td></tr>`;
   }).join("");
@@ -804,8 +816,10 @@ function render(rows) {
 
 function scanCsv(rows) {
   const flat = rows.map(r => {
-    const { hist, flags, url, odds, ...rest } = r;
+    const { hist, flags, url, odds, wc, ...rest } = r;
     return { ...rest,
+      wildCard: wc ? wc.score : "",
+      wildCardBand: wc ? wc.band.n : "",
       oddsUpPct: odds ? +odds.p.toFixed(1) : "",
       oddsSample: odds ? odds.n : "",
       below52wkPct: hist ? +hist.below.toFixed(1) : "",
@@ -1086,8 +1100,9 @@ function nowScore(r) {
 }
 
 function renderNow(rows) {
+  rows.forEach(r => { r.wc = wildCard(r); });
   $("head").innerHTML = `<tr><th class="l">#</th><th class="l">Ticker</th><th>Price</th><th>Today</th>
-    <th>Volume, last 15 min</th><th>Move, last 15 min</th><th>From day’s high</th><th>vs. VWAP</th><th>Since data</th><th>Odds up</th><th class="l">Latest news</th><th>Rating</th></tr>`;
+    <th>Volume, last 15 min</th><th>Move, last 15 min</th><th>From day’s high</th><th>vs. VWAP</th><th>Since data</th><th>Odds up</th><th>Wild card</th><th class="l">Latest news</th><th>Rating</th></tr>`;
   const signed = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
   $("rows").innerHTML = rows.map((r, i) => `<tr>
       <td class="l rank">${i + 1}</td>
@@ -1100,6 +1115,7 @@ function renderNow(rows) {
       <td class="${r.vsVwap >= 0 ? "pos" : "neg"}">${signed(r.vsVwap)}</td>
       <td>${r.liveMove === null ? "—" : `<span class="${r.liveMove >= 0 ? "pos" : "neg"}">${signed(r.liveMove)}</span>`}</td>
       <td>${oddsCell(r)}</td>
+      <td>${wcCell(r)}</td>
       <td class="l news">${r.freshNews ? '<span class="flag" style="background:var(--up-soft);color:var(--up)">Last 2 hours</span><br>' : ""}${newsCell(r)}</td>
       <td class="score">${Math.round(r.score)}</td></tr>`).join("");
   $("tbl").hidden = false; $("empty").hidden = true;
@@ -1109,7 +1125,7 @@ function renderNow(rows) {
 function savedDates() { try { return JSON.parse(load("pick_dates") || "[]"); } catch { return []; } }
 function savePicks(date, rows) {
   save("picks:" + date, JSON.stringify(rows.map(r => ({ ticker: r.ticker, pmPrice: +r.price.toFixed(4),
-    gap: +r.gap.toFixed(1), score: +r.score.toFixed(1), news: r.headline ? 1 : 0 }))));
+    gap: +r.gap.toFixed(1), score: +r.score.toFixed(1), wc: r.wc ? r.wc.score : wildCard(r).score, news: r.headline ? 1 : 0 }))));
   const dates = savedDates();
   if (!dates.includes(date)) { dates.push(date); dates.sort(); save("pick_dates", JSON.stringify(dates)); }
   fillDates();
@@ -1338,6 +1354,70 @@ function oddsCell(r) {
   return `<div class="odds ${cls}" title="${esc(tip)}"><div class="oddsbar"><i style="width:${o.p.toFixed(0)}%"></i></div>` +
     `<b>${o.p.toFixed(0)}%</b><small>+15%: ${o.h15.toFixed(0)}% · −7%: ${o.d7.toFixed(0)}%</small>` +
     (typeof r.sinceOpen === "number" ? `<small>now ${r.sinceOpen >= 0 ? "+" : "−"}${Math.abs(r.sinceOpen).toFixed(1)}% vs open</small>` : "") + `</div>`;
+}
+
+// ---------- Wild card meter: how much a stock looks like one that could pop 20%+ ----------
+// A ranking score from 0 to 100, not a probability. Each signal is scaled 0 to 1, weighted, and the
+// total is scaled over the signals that exist for that scan (pre-market vs. right now).
+function wildCard(r) {
+  const ramp = (x, lo, hi) => Math.max(0, Math.min(1, (x - lo) / (hi - lo)));
+  const f0 = (x, d = 0) => Number(x).toFixed(d);
+  const parts = [];
+  const add = (w, frac, good, bad) => parts.push({ w, frac, text: frac >= 0.5 ? good : bad });
+  const now = lastMode === "rightnow";
+
+  if (typeof r.gap === "number")
+    add(now ? 10 : 20, ramp(r.gap, 0, 20),
+      `Opened up ${f0(r.gap, 1)}% from yesterday, so it is already moving`, `Only a ${f0(r.gap, 1)}% gap, so no big move yet`);
+  if (!now && typeof r.volPct === "number")
+    add(20, ramp(r.volPct, 5, 50),
+      `Pre-market volume is already ${f0(r.volPct)}% of a normal full day, so lots of interest`,
+      `Pre-market volume is only ${f0(r.volPct)}% of a normal day`);
+  if (now && typeof r.surge === "number")
+    add(25, ramp(r.surge, 1, 6) * Math.min(1, (r.busy || 0) / 5),
+      `Trading ${f0(r.surge, 1)}× normal volume over ${r.busy} busy minutes`, `Volume is not unusual right now (${f0(r.surge, 1)}× normal)`);
+  if (now && typeof r.dayChg === "number")
+    add(15, ramp(r.dayChg, 0, 20), `Up ${f0(r.dayChg, 1)}% today`, `Only ${f0(r.dayChg, 1)}% today`);
+  if (now && typeof r.move15 === "number")
+    add(15, ramp(r.move15, 0, 3), `Rising: up ${f0(r.move15, 1)}% in the last 15 minutes`, `Not rising in the last 15 minutes (${f0(r.move15, 1)}%)`);
+  if (now && typeof r.nearHigh === "number")
+    add(15, ramp(r.nearHigh, 90, 100), `Pressing the day’s high, so buyers are not letting go`, `Sitting well below the day’s high`);
+  if (now && typeof r.vsVwap === "number")
+    add(5, r.vsVwap > 0 ? 1 : 0, `Trading above the day’s average price`, `Trading below the day’s average price`);
+  if (now && typeof r.liveMove === "number")
+    add(5, ramp(r.liveMove, -3, 1), `Still moving up since the data`, `Fading since the data`);
+  if (r.odds && typeof r.odds.h15 === "number")
+    add(20, ramp(r.odds.h15, 5, 30),
+      `Past cases like this hit +15% about ${f0(r.odds.h15)}% of the time`, `Past cases like this rarely hit +15% (${f0(r.odds.h15)}%)`);
+  if (typeof r.newsPts === "number")
+    add(now ? 10 : 15, ramp(r.newsPts, 0, 4) * (now && !r.freshNews ? 0.6 : 1),
+      r.headline ? `There is news, a reason for people to pile in` : `There is a catalyst`, `No real catalyst in the news`);
+  if (typeof r.price === "number")
+    add(10, r.price < 1 ? 1 : r.price < 2 ? 0.8 : r.price < 3 ? 0.6 : r.price < 5 ? 0.3 : 0,
+      `Cheap stock (${money(r.price)}), where big percentage moves are common`, `Pricier stock (${money(r.price)}), so big percentage moves are rarer`);
+  if (r.hist && typeof r.hist.spikes === "number")
+    add(5, ramp(r.hist.spikes, 0, 3), `It has spiked 50%+ ${r.hist.spikes} time(s) in the past 6 months`, `No big spikes in the past 6 months`);
+
+  const wTot = parts.reduce((a, p) => a + p.w, 0);
+  let score = wTot ? parts.reduce((a, p) => a + p.w * p.frac, 0) / wTot * 100 : 0;
+  const bad = typeof r.newsPts === "number" && r.newsPts < 0;       // offerings and similar bad news
+  const reasons = parts.sort((a, b) => b.w * b.frac - a.w * a.frac).map(p => (p.frac >= 0.5 ? "+ " : "– ") + p.text);
+  if (bad) { score *= 0.5; reasons.unshift("– Bad news (like a stock offering) cuts the score in half"); }
+  score = Math.round(score);
+  const band = score >= 75 ? { n: "Wild card", c: "x" } : score >= 50 ? { n: "Hot", c: "h" }
+             : score >= 25 ? { n: "Warming up", c: "w" } : { n: "Quiet", c: "q" };
+  return { score, band, reasons, signals: parts.length };
+}
+function wcCell(r) {
+  const w = r.wc || (r.wc = wildCard(r));
+  const R = 28, cx = 34, cy = 34, a = Math.PI * (1 - w.score / 100);
+  const x = cx + R * Math.cos(a), y = cy - R * Math.sin(a);
+  const arc = w.score > 0 ? `<path class="wcarc" d="M6 34 A28 28 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke-width="6" stroke-linecap="round"/>` : "";
+  const tip = `Wild card score ${w.score} of 100, based on ${w.signals} signals.\n` + w.reasons.slice(0, 6).join("\n") +
+    `\nThis ranks how much it looks like a stock that could pop 20%+. It is not a probability.`;
+  return `<div class="wc ${w.band.c}" title="${esc(tip)}"><svg viewBox="0 0 68 40" role="img" aria-label="Wild card ${w.score}">` +
+    `<path class="wctrack" d="M6 34 A28 28 0 0 1 62 34" fill="none" stroke-width="6" stroke-linecap="round"/>${arc}` +
+    `<text class="wcnum" x="34" y="33" text-anchor="middle">${w.score}</text></svg><small>${w.band.n}</small></div>`;
 }
 
 async function enrichHistory(rows) {
@@ -2040,6 +2120,7 @@ const NV_HELP = {
   "gap": "How far the price is above yesterday’s close, before the open.",
   "pre-mkt volume": "Shares traded before the open (data is 15 minutes behind).",
   "% of avg day": "Pre-market volume as a percent of a normal full day. Bigger means more interest.",
+  "wild card": "Ranks how much it looks like a stock that could pop 20%+. It is not a probability.",
   "odds up": "Historical base rate: how often similar gaps finished the day above their open. Not a prediction.",
   "checklist": "How many of the page’s rules this stock meets. It is not a buy signal.",
   "volume, last 15 min": "Recent volume compared with normal. Busy minutes = minutes with at least 2× normal volume.",
