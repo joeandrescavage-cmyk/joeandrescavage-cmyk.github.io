@@ -270,7 +270,10 @@
   .pill.err { background: var(--flag-soft); color: var(--flag); }
   .hintbar { grid-column: 1 / -1; font-size: 13.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 2px; }
   .tools { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 14px; margin: 0 0 18px; align-items: start; }
-  .tools .tall { grid-row: span 2; }
+  .tools { grid-template-areas: "live sizer" "guard sizer"; }
+  #livePanel { grid-area: live; }
+  #sizer { grid-area: sizer; }
+  #guard { grid-area: guard; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
   .card h2 { font-size: 16px; margin: 0; }
   .cardhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -325,7 +328,7 @@
   .empty { padding: 14px; color: var(--muted); font-size: 14px; }
   @media (max-width: 900px) {
     .tools { grid-template-columns: 1fr; }
-    .tools .tall { grid-row: auto; }
+    .tools { grid-template-areas: "live" "sizer" "guard"; }
     .appbar { grid-template-columns: minmax(0, 1fr) auto; top: 4px; }
     .mkt { grid-column: 1 / -1; order: 3; }
     .appbar h1 { font-size: 19px; }
@@ -2013,11 +2016,13 @@ function nvChecks(r, mode) {
     add("Heavy volume today (2× normal)", r.volX >= 2, `${r.volX.toFixed(1)}× its normal volume`);
     add("Closed near its high (70%+)", r.nearHigh >= 70, `Closed at ${Math.round(r.nearHigh)}% of the day’s range`);
     add("After-hours not fading", r.ahChg >= -3, `After hours ${r.ahChg >= 0 ? "+" : "−"}${Math.abs(r.ahChg).toFixed(1)}%`);
+    add("Not chasing (up under 40% today)", r.dayChg < 40, `Up ${r.dayChg.toFixed(1)}% on the day`);
   } else {
     add("Volume surge (3× normal, 6+ busy minutes)", r.surge >= 3 && r.busy >= 6, `${r.surge.toFixed(1)}× normal, ${r.busy} busy minutes`);
     add("Above its average price (VWAP)", r.vsVwap > 0, `${r.vsVwap >= 0 ? "+" : "−"}${Math.abs(r.vsVwap).toFixed(1)}% vs VWAP`);
     add("Near the day’s high (within 3%)", r.nearHigh >= 97, `At ${r.nearHigh.toFixed(1)}% of the high`);
     add("Still rising (last 15 minutes)", r.move15 > 0, `${r.move15 >= 0 ? "+" : "−"}${Math.abs(r.move15).toFixed(1)}% in 15 min`);
+    add("Not chasing (up under 40% today)", r.dayChg < 40, `Up ${r.dayChg.toFixed(1)}% on the day`);
   }
   if (r.hist) add("Not a serial spiker", r.hist.spikes < 3, `${r.hist.spikes} spikes of 50%+ in the last 6 months`);
   if (r.odds) add("History favors it (odds 45%+)", r.odds.p >= 45, `${r.odds.p.toFixed(0)}% of similar cases finished above the open`);
@@ -2142,7 +2147,7 @@ function nvTodayPL() {
 function nvGuard() {
   const acct = nvAccount(), pct = +$("lossPct").value || 3, limit = acct * pct / 100, pl = nvTodayPL();
   const used = pl < 0 ? Math.min(1, -pl / limit) : 0, cls = used >= 1 ? "lo" : used >= 0.6 ? "mid" : "";
-  $("lossOut").innerHTML = `<div class="stats3" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Realized today</span><b class="${pl >= 0 ? "pos" : "neg"}">${pl >= 0 ? "+" : "−"}${money(Math.abs(pl))}</b></div>` +
+  $("lossOut").innerHTML = `<div class="stats3" style="grid-template-columns:1fr 1fr"><div class="stat"><span>Realized today</span><b class="${pl >= 0 ? "pos" : "neg"}">${pl >= 0 ? "+" : "−"}$${Math.abs(pl).toFixed(2)}</b></div>` +
     `<div class="stat"><span>Daily loss limit</span><b>${money(limit)}</b></div></div><div class="meter ${cls}"><i style="width:${Math.round(used * 100)}%"></i></div>` +
     (used >= 1 ? `<div class="warn">You’ve hit your daily loss limit. Stop trading for today.</div>` :
      used >= 0.6 ? `<div class="warn">You’re close to your limit. Smaller size or no more trades.</div>` :
@@ -2180,6 +2185,7 @@ async function nvLoadPrev(syms) {
       start: new Date(midnight.getTime() - 12 * 86400000).toISOString(), end: new Date(midnight.getTime() - 60000).toISOString() }, "Loading previous closes", nvNote);
     need.forEach(s => { const b = bars[s]; NV.prev[s] = b && b.length ? b[b.length - 1].c : null; });
   } catch { /* optional */ }
+  if (/Loading previous closes/.test($("lwNote").textContent)) nvNote("");
 }
 function nvSend(o) { if (NV.ws && NV.ws.readyState === 1) NV.ws.send(JSON.stringify(o)); }
 function nvSync() {
